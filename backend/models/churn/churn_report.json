@@ -1,0 +1,88 @@
+{
+  "n_total": 2622,
+  "n_active": 1940,
+  "n_not_donated_1y": 361,
+  "n_limited_despite_calls": 321,
+  "n_train": 2097,
+  "n_test": 525,
+  "binary_auc": 0.9388515046121275,
+  "macro_f1": 0.7489569835743756,
+  "weighted_f1": 0.8535442152589653,
+  "class_aucs": {
+    "active": 0.9388515046121276,
+    "inactive_not_donated_1y": 0.8692206279126808,
+    "inactive_limited_despite_calls": 0.961242543383948
+  },
+  "classification_report": {
+    "active": {
+      "precision": 0.9386666666666666,
+      "recall": 0.9048843187660668,
+      "f1-score": 0.9214659685863874,
+      "support": 389.0
+    },
+    "inactive_not_donated_1y": {
+      "precision": 0.6268656716417911,
+      "recall": 0.5833333333333334,
+      "f1-score": 0.60431654676259,
+      "support": 72.0
+    },
+    "inactive_limited_despite_calls": {
+      "precision": 0.6385542168674698,
+      "recall": 0.828125,
+      "f1-score": 0.7210884353741497,
+      "support": 64.0
+    },
+    "accuracy": 0.8514285714285714,
+    "macro avg": {
+      "precision": 0.7346955183919759,
+      "recall": 0.7721142173664667,
+      "f1-score": 0.7489569835743756,
+      "support": 525.0
+    },
+    "weighted avg": {
+      "precision": 0.8593202506115435,
+      "recall": 0.8514285714285714,
+      "f1-score": 0.8535442152589653,
+      "support": 525.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      352,
+      17,
+      20
+    ],
+    [
+      20,
+      42,
+      10
+    ],
+    [
+      3,
+      8,
+      53
+    ]
+  ],
+  "feature_importances": {
+    "donations_till_date": 0.06578341126441956,
+    "avg_cycle_days": 0.14338083565235138,
+    "days_since_last_contact": 0.08229205012321472,
+    "days_since_registration": 0.0,
+    "is_regular": 0.0495307557284832,
+    "is_one_time": 0.07519759982824326,
+    "has_blood_group": 0.014673270285129547,
+    "donated_earlier": 0.5691419839859009
+  },
+  "feature_names": [
+    "donations_till_date",
+    "avg_cycle_days",
+    "days_since_last_contact",
+    "days_since_registration",
+    "is_regular",
+    "is_one_time",
+    "has_blood_group",
+    "donated_earlier"
+  ],
+  "cv_macro_f1_mean": 0.7364992311710158,
+  "cv_macro_f1_std": 0.02177264618039489
+}

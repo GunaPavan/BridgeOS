@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Aurora orbs for the landing hero. Two slow-moving blobs in primary + accent. */
+@keyframes aurora-drift-a {
+  0%   { transform: translate3d(-12%, -8%, 0) scale(1); }
+  50%  { transform: translate3d(18%, 12%, 0) scale(1.15); }
+  100% { transform: translate3d(-12%, -8%, 0) scale(1); }
+}
+
+@keyframes aurora-drift-b {
+  0%   { transform: translate3d(18%, 10%, 0) scale(1.1); }
+  50%  { transform: translate3d(-14%, -10%, 0) scale(0.95); }
+  100% { transform: translate3d(18%, 10%, 0) scale(1.1); }
+}
+
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.75; }
+}
+
+.aurora-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation-duration: 18s, 6s;
+  animation-iteration-count: infinite, infinite;
+  animation-timing-function: ease-in-out, ease-in-out;
+}
+
+.aurora-orb-a {
+  background: radial-gradient(circle, rgba(255, 107, 107, 0.55), transparent 70%);
+  animation-name: aurora-drift-a, aurora-pulse;
+}
+
+.aurora-orb-b {
+  background: radial-gradient(circle, rgba(78, 205, 196, 0.45), transparent 70%);
+  animation-name: aurora-drift-b, aurora-pulse;
+  animation-duration: 22s, 7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-orb {
+    animation: none !important;
+  }
+}

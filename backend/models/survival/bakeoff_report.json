@@ -1,0 +1,65 @@
+[
+  {
+    "name": "CoxPH",
+    "c_index_train": 0.9102508709327516,
+    "c_index_test": 0.9303984140798762,
+    "train_time_ms": 220.61140000005253,
+    "inference_time_us": 1750.956000003498,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "Weibull_AFT",
+    "c_index_train": 0.9175537138143682,
+    "c_index_test": 0.9422928150082197,
+    "train_time_ms": 1521.130200009793,
+    "inference_time_us": 4616.4130000106525,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "LogNormal_AFT",
+    "c_index_train": 0.9269564639374922,
+    "c_index_test": 0.9354752925249009,
+    "train_time_ms": 2095.989699999336,
+    "inference_time_us": 8767.416000016965,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "LogLogistic_AFT",
+    "c_index_train": 0.9220556732242188,
+    "c_index_test": 0.9423411662315057,
+    "train_time_ms": 1463.2211999996798,
+    "inference_time_us": 9366.70199999935,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "XGBoost_AFT",
+    "c_index_train": 0.9596727166152517,
+    "c_index_test": 0.9367324243303355,
+    "train_time_ms": 942.7639999921666,
+    "inference_time_us": 758.54260000051,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "RandomSurvivalForest",
+    "c_index_train": 0.8966301776310025,
+    "c_index_test": 0.8927811623634078,
+    "train_time_ms": 4136.071000000811,
+    "inference_time_us": 30328.21479998529,
+    "failed": false,
+    "error": ""
+  },
+  {
+    "name": "GradientBoostingSurvival",
+    "c_index_train": 0.9417373937582901,
+    "c_index_test": 0.9356686974180447,
+    "train_time_ms": 50257.87699999637,
+    "inference_time_us": 142.48820001375861,
+    "failed": false,
+    "error": ""
+  }
+]

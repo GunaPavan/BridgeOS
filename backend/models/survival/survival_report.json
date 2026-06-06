@@ -1,0 +1,43 @@
+{
+  "n_total": 6949,
+  "n_events": 682,
+  "n_censored": 6267,
+  "c_index": 0.6541348158443363,
+  "median_survival_days": 809.0,
+  "coefficients": {
+    "donations_till_date": -0.04764723996617242,
+    "avg_cycle_days": -0.0009186213631431925,
+    "is_regular": 0.7221289350735967,
+    "is_one_time": -0.09328820157298597,
+    "has_blood_group": -0.018176206376753663,
+    "donated_earlier": 1.988680704972339e-14,
+    "log_total_donations": 0.004761575765781953
+  },
+  "hazard_ratios": {
+    "donations_till_date": 0.9534700738952637,
+    "avg_cycle_days": 0.9990818004402922,
+    "is_regular": 2.0588116245881816,
+    "is_one_time": 0.9109309307343584,
+    "has_blood_group": 0.98198798456791,
+    "donated_earlier": 1.00000000000002,
+    "log_total_donations": 1.0047729300819943
+  },
+  "p_values": {
+    "donations_till_date": 0.5455081532944187,
+    "avg_cycle_days": 0.031724600965000974,
+    "is_regular": 1.0223820229966796e-05,
+    "is_one_time": 0.5583221245314988,
+    "has_blood_group": 0.935135619670804,
+    "donated_earlier": 0.9999999999999429,
+    "log_total_donations": 0.9843228968105213
+  },
+  "feature_names": [
+    "donations_till_date",
+    "avg_cycle_days",
+    "is_regular",
+    "is_one_time",
+    "has_blood_group",
+    "donated_earlier",
+    "log_total_donations"
+  ]
+}
