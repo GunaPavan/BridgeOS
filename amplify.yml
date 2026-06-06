@@ -1,19 +1,28 @@
+# When the "Monorepo app root" field is set to `frontend` in the Amplify
+# console, Amplify automatically `cd`s into that directory before running
+# the build. Our YAML should therefore live at the REPO ROOT but treat
+# the working directory as already-inside `frontend/`.
+#
+# (If we put `applications: - appRoot: frontend` here, it conflicts with
+# the console's monorepo root and the build either runs twice or fails.)
+
 version: 1
-applications:
-  - appRoot: frontend
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - npm ci
-        build:
-          commands:
-            - npm run build
-      artifacts:
-        baseDirectory: .next
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-          - .next/cache/**/*
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --cache .npm --prefer-offline
+    build:
+      commands:
+        - env | grep -E "NEXT_PUBLIC|AMPLIFY" || true
+        - npm run build
+  artifacts:
+    # Next.js SSR build output. Amplify Hosting detects required-server-files.json
+    # inside .next/ and provisions Lambda@Edge automatically.
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - .npm/**/*
+      - .next/cache/**/*
