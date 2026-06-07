@@ -5,13 +5,18 @@ import AboutPage from "@/app/about/page";
 import HowItWorksPage from "@/app/how-it-works/page";
 
 describe("HowItWorksPage", () => {
-  it("renders the architecture diagram", () => {
+  it("renders the architecture diagram with the production AWS stack", () => {
     render(<HowItWorksPage />);
     const diagram = screen.getByTestId("architecture-diagram");
     expect(diagram).toBeInTheDocument();
+    // Three primary layers
     expect(diagram).toHaveTextContent(/FRONTEND/);
     expect(diagram).toHaveTextContent(/BACKEND/);
-    expect(diagram).toHaveTextContent(/DATA/);
+    // RDS replaces the old "DATA" label; verify the persistence layer is named
+    expect(diagram).toHaveTextContent(/RDS/);
+    // AWS edge + auth wiring should appear
+    expect(diagram).toHaveTextContent(/EDGE/);
+    expect(diagram).toHaveTextContent(/Cognito/);
   });
 
   it("renders all four differentiator deep-dive cards", () => {

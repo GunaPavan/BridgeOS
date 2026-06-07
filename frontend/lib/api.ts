@@ -1171,10 +1171,36 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Attach the Cognito ID token to every request when one exists.
+ *
+ * We dynamic-import `@/lib/cognito` only in the browser so the api module
+ * stays safe to import from server-rendered code paths (amazon-cognito-
+ * identity-js touches `window.localStorage` at construction time).
+ *
+ * Endpoints that don't require auth still work — they just receive a
+ * request without the Authorization header.
+ */
+async function _maybeAuthHeader(): Promise<Record<string, string>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const { getIdTokenForRequest } = await import("./cognito");
+    const token = await getIdTokenForRequest();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const authHeader = await _maybeAuthHeader();
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader,
+      ...(init?.headers ?? {}),
+    },
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");

@@ -5,12 +5,18 @@ import {
   ArrowRight,
   BrainCircuit,
   CalendarClock,
+  Cloud,
   Database,
   Droplet,
+  KeyRound,
   Layers,
+  Mail,
   MessageSquareText,
   Network,
   Play,
+  Server,
+  ShieldCheck,
+  Siren,
   Sparkles,
   Workflow,
 } from "lucide-react";
@@ -99,32 +105,97 @@ export default function HowItWorksPage() {
             </p>
           </div>
           <h2 className="text-3xl font-bold sm:text-4xl">
-            One backend, four AI services, a Next.js dashboard, real WhatsApp
+            Production-deployed on AWS — ECS Fargate, RDS, Cognito, Bedrock, end-to-end
           </h2>
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/60">
+            Bridge OS is not a local prototype. The backend runs on Amazon ECS
+            Fargate behind an Application Load Balancer with an ACM cert at
+            <code className="mx-1 rounded bg-white/5 px-1 text-accent">api.bridge-os.click</code>.
+            Cognito guards every endpoint with role-based JWTs. EventBridge fires
+            scheduled ticks, SQS absorbs outbound, SNS fans out events to Lambda,
+            and CloudWatch alarms watch the lot.
+          </p>
 
           <pre
             data-testid="architecture-diagram"
             className="mt-10 overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-6 font-mono text-[12px] leading-6 text-white/80"
-          >{`┌─ FRONTEND  Next.js 14 App Router · Tailwind · TanStack Query ─┐
+          >{`┌─ FRONTEND  Next.js 14 · Tailwind · TanStack Query · Amplify ──┐
+│   bridge-os.click                                               │
 │   /bridges  /donors  /patients  /recommendations  /simulator    │
-│   /analytics  /integrations  /whatsapp  /agent                  │
+│   /analytics  /integrations  /whatsapp  /emails  /agent         │
+│   /donor (self-service)   /patient (self-service)               │
+│   /login   /signup → Cognito (donor / patient self-signup)      │
+└──────────────────────────────┬─────────────────────────────────┘
+                               │  HTTPS (Cognito ID-token JWT)
+┌─ EDGE  ALB + ACM cert  api.bridge-os.click ────────────────────┐
+│  Route 53 (apex + api + MX)   ACM TLS                           │
 └──────────────────────────────┬─────────────────────────────────┘
                                │
-┌─ BACKEND  FastAPI ───────────▼─────────────────────────────────┐
-│  Bridges / Donors / Patients  ─ CRUD + filtered queries         │
-│  Stability  ─ XGBoost 30/60/90d  +  SHAP TreeExplainer          │
-│  Schedule   ─ OR-Tools CP-SAT  (90d deferral, distance min.)    │
-│  Recommend  ─ Composite scorer  (dist + resp + churn + kell)    │
-│  Simulator  ─ Stateless what-if  (no DB writes)                 │
-│  WhatsApp   ─ Twilio (or mock) + inbound webhook                │
-│  Care Agent ─ AWS Bedrock (Sonnet + Haiku + Titan v2) / mock    │
-│  Integrate  ─ eRaktKosh + ICMR RDRI mocks                       │
-└──────────────────────────────┬─────────────────────────────────┘
-                               │  SQLAlchemy
-┌─ DATA  Postgres + pgvector (or SQLite for local) ──────────────┐
-│  Patient · Donor · Bridge · BridgeMembership                    │
-│  WhatsAppMessage · AgentMessage                                 │
-└────────────────────────────────────────────────────────────────┘`}</pre>
+┌─ BACKEND  ECS Fargate · FastAPI ─────────────────────────────────┐
+│  Bridges / Donors / Patients ─ CRUD + filtered queries           │
+│  Stability  ─ XGBoost churn 3-class + Survival GBM (C=0.751)     │
+│  Schedule   ─ OR-Tools CP-SAT (90d deferral, distance min.)      │
+│  Recommend  ─ Composite scorer (dist + resp + churn + kell)      │
+│  Simulator  ─ Stateless what-if (no DB writes)                   │
+│  Outreach   ─ WhatsApp / SMS / Email (per-donor preference)      │
+│  Care Agent ─ AWS Bedrock Claude Sonnet 4.5 + Haiku + Titan v2   │
+│  Escalation ─ Tiered call escalation w/ Twilio Voice <Gather>    │
+│  RBAC       ─ Cognito groups: admin / coordinator / donor / pat  │
+└─────┬───────────────┬───────────────┬───────────────┬──────────┘
+      │               │               │               │
+┌─────▼─ RDS ───┐ ┌───▼ SES ─────┐ ┌──▼ Bedrock ─┐ ┌──▼ Cognito ─┐
+│ Postgres 16  │ │ Inbound (S3) │ │ Sonnet 4.5  │ │ User Pool   │
+│ + pgvector   │ │ Outbound DKIM│ │ Haiku       │ │ + Post-     │
+│              │ │ bridge-os.cl │ │ Titan v2    │ │   Confirm λ │
+└──────────────┘ └──────────────┘ └─────────────┘ └─────────────┘
+      │
+┌─────▼ SQS ─────┐ ┌─ SNS ───────┐ ┌─ EventBridge ┐ ┌─ CloudWatch ┐
+│ outbound      │ │ events fan- │ │ scheduled    │ │ dashboard   │
+│ dispatch +    │ │ out → 2     │ │ ticks → λ →  │ │ + alarms    │
+│ DLQ           │ │ Lambda subs │ │ /scheduler/* │ │ (SQS / SES) │
+└───────────────┘ └─────────────┘ └──────────────┘ └─────────────┘
+                                                    │
+                                              ┌─────▼ Twilio ────┐
+                                              │ WhatsApp · SMS  │
+                                              │ Voice <Gather>  │
+                                              └─────────────────┘`}</pre>
+        </div>
+      </section>
+
+      {/* ---- AWS production deploy ---- */}
+      <section className="border-b border-white/5 px-6 py-20">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-10 flex items-center gap-3">
+            <Cloud className="h-5 w-5 text-sky-400" />
+            <p className="text-xs uppercase tracking-widest text-sky-400">
+              Live on AWS
+            </p>
+          </div>
+          <h2 className="text-3xl font-bold sm:text-4xl">
+            Sixteen AWS services in production — within a $40 budget
+          </h2>
+          <p className="mt-4 max-w-3xl text-sm leading-relaxed text-white/60">
+            Every service below is wired and exercised by the live deploy.
+            Mock mode still exists for local dev (the same code paths return
+            deterministic data when AWS env vars are absent), but the
+            <code className="mx-1 rounded bg-white/5 px-1 text-accent">bridge-os.click</code>
+            instance uses the real thing end-to-end.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <AwsRow icon={Server} name="ECS Fargate · Express Mode" detail="x86_64 task running the FastAPI image behind an ALB. Replaces deprecated App Runner." />
+            <AwsRow icon={Database} name="RDS Postgres 16 + pgvector" detail="t4g.micro Multi-AZ-ready. Holds donors, patients, bridges, agent memory embeddings." />
+            <AwsRow icon={KeyRound} name="Cognito User Pool + Groups" detail="4 RBAC roles. PostConfirmation Lambda auto-assigns self-signups into donor/patient groups." />
+            <AwsRow icon={Sparkles} name="Bedrock Claude Sonnet 4.5" detail="Multilingual care agent, reply intent classifier, voice <Gather> dialog brain." />
+            <AwsRow icon={Mail} name="SES inbound + outbound" detail="MX on bridge-os.click receives caregiver replies; S3 poller pipes them into the same automation loop as WhatsApp." />
+            <AwsRow icon={MessageSquareText} name="SQS dispatch queue + DLQ" detail="Outbound messages flow through SQS; poison pills land in a DLQ with a republish API." />
+            <AwsRow icon={Network} name="SNS topics + Lambda subs" detail="Two topics (donor-events, bridge-events) fan out to Lambda subscribers for side effects." />
+            <AwsRow icon={CalendarClock} name="EventBridge Scheduler" detail="Replaces APScheduler in-process ticks; fires scheduler/follow-up jobs into a Lambda that POSTs the backend." />
+            <AwsRow icon={Cloud} name="ALB + ACM TLS" detail="api.bridge-os.click TLS-1.2 with ACM cert, listener-rule based path routing." />
+            <AwsRow icon={Network} name="Route 53 hosted zone" detail="Apex bridge-os.click + api subdomain + MX records for SES inbound." />
+            <AwsRow icon={Siren} name="CloudWatch dashboard + alarms" detail="Alerts on SQS depth, SES bounces, RDS CPU. Logs flow into /ecs/* groups." />
+            <AwsRow icon={ShieldCheck} name="IAM least-privilege roles" detail="Task role only owns the resources it touches; secrets injected via env vars from the task def." />
+          </div>
         </div>
       </section>
 
@@ -258,12 +329,20 @@ export default function HowItWorksPage() {
           <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             <StackTile icon={BrainCircuit} group="ML" label="XGBoost + SHAP" />
             <StackTile icon={CalendarClock} group="Optim" label="Google OR-Tools (CP-SAT)" />
-            <StackTile icon={Sparkles} group="LLM" label="AWS Bedrock (Claude + Titan)" />
-            <StackTile icon={MessageSquareText} group="Comms" label="Twilio WhatsApp" />
+            <StackTile icon={Sparkles} group="LLM" label="Bedrock Claude 4.5 + Titan v2" />
+            <StackTile icon={MessageSquareText} group="Comms" label="Twilio WhatsApp + Voice" />
+            <StackTile icon={Mail} group="Comms" label="Amazon SES (in/out)" />
             <StackTile icon={Droplet} group="Data" label="eRaktKosh inventory" />
             <StackTile icon={Database} group="Data" label="ICMR Rare Donor Registry" />
+            <StackTile icon={Server} group="Compute" label="ECS Fargate · Express Mode" />
+            <StackTile icon={Database} group="DB" label="RDS Postgres 16 + pgvector" />
+            <StackTile icon={KeyRound} group="Auth" label="Cognito User Pool + groups" />
+            <StackTile icon={CalendarClock} group="Sched" label="EventBridge → Lambda" />
+            <StackTile icon={Network} group="Bus" label="SQS + DLQ + SNS topics" />
+            <StackTile icon={Siren} group="Obs" label="CloudWatch dashboard" />
+            <StackTile icon={Cloud} group="Edge" label="ALB + ACM + Route 53" />
             <StackTile icon={Network} group="Backend" label="FastAPI + SQLAlchemy 2" />
-            <StackTile icon={Workflow} group="Frontend" label="Next.js 14 + Tailwind" />
+            <StackTile icon={Workflow} group="Frontend" label="Next.js 14 + Amplify" />
           </div>
         </div>
       </section>
@@ -275,16 +354,24 @@ export default function HowItWorksPage() {
             Ready to try it?
           </h2>
           <p className="mt-4 text-base text-white/60">
-            Every model, scheduler, and integration runs against live synthetic
-            data. No login required.
+            Every model, scheduler, and integration runs against real Blood
+            Warriors-style donor data on the live AWS deploy. Sign in as a
+            coordinator to drive it, or sign up as donor / patient for the
+            self-service portal.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/bridges"
+              href="/login"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-600"
             >
-              Open dashboard
+              Sign in
               <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              Sign up as donor / patient
             </Link>
             <Link
               href="/about"
@@ -405,6 +492,28 @@ function StackTile({
       <div className="mt-1 flex items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-accent" />
         <p className="text-xs font-medium text-white/85">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function AwsRow({
+  icon: Icon,
+  name,
+  detail,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  name: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-surface/40 p-4">
+      <div className="rounded-lg bg-sky-500/10 p-2 ring-1 ring-sky-500/20">
+        <Icon className="h-4 w-4 text-sky-400" />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-white">{name}</p>
+        <p className="mt-1 text-xs leading-relaxed text-white/60">{detail}</p>
       </div>
     </div>
   );

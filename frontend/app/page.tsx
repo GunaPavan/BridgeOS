@@ -5,13 +5,16 @@ import {
   BrainCircuit,
   CalendarClock,
   CheckCircle2,
+  Cloud,
   Droplet,
   Languages,
+  LogIn,
   MessageSquareText,
   Network,
   Play,
   ShieldCheck,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 
 import { MarketingFooter } from "@/components/marketing/footer";
@@ -172,6 +175,28 @@ export default function HomePage() {
             </Link>
           </div>
 
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-white/55">
+            <span>Have an account?</span>
+            <Link
+              href="/login"
+              data-testid="hero-cta-signin"
+              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 font-medium text-white/85 hover:border-white/30 hover:text-white"
+            >
+              <LogIn className="h-3 w-3" />
+              Sign in
+            </Link>
+            <span className="text-white/30">·</span>
+            <span>New here?</span>
+            <Link
+              href="/signup"
+              data-testid="hero-cta-signup"
+              className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 font-medium text-primary ring-1 ring-primary/30 hover:bg-primary/25"
+            >
+              <UserPlus className="h-3 w-3" />
+              Sign up (donor or patient)
+            </Link>
+          </div>
+
           {/* Impact strip */}
           <div className="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-4 sm:grid-cols-4">
             {IMPACT_STATS.map((s) => (
@@ -316,10 +341,13 @@ export default function HomePage() {
             <div className="grid grid-cols-3 gap-2 text-center">
               <Pill icon={ShieldCheck} label="eRaktKosh" />
               <Pill icon={Droplet} label="ICMR RDRI" />
-              <Pill icon={MessageSquareText} label="Twilio WA" />
+              <Pill icon={MessageSquareText} label="Twilio WA + Voice" />
               <Pill icon={Languages} label="8 languages" />
               <Pill icon={BrainCircuit} label="XGBoost + SHAP" />
               <Pill icon={CalendarClock} label="OR-Tools" />
+              <Pill icon={Cloud} label="AWS ECS + RDS" />
+              <Pill icon={Sparkles} label="Bedrock Claude 4.5" />
+              <Pill icon={ShieldCheck} label="Cognito RBAC" />
             </div>
           </div>
         </div>
@@ -352,9 +380,16 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="mt-8 inline-flex items-center gap-3 text-xs text-white/40">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-            All 247 tests passing · 170 backend · 77 frontend · 48 live E2E
+          <div className="mt-8 inline-flex flex-wrap items-center justify-center gap-3 text-xs text-white/40">
+            <span className="inline-flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+              887+ tests green · 673 backend · 214 frontend
+            </span>
+            <span className="text-white/20">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Cloud className="h-3.5 w-3.5 text-sky-400" />
+              Live on AWS — ECS Fargate · RDS pgvector · Cognito · Bedrock · SES · SQS · SNS · EventBridge · CloudWatch
+            </span>
           </div>
         </div>
       </section>

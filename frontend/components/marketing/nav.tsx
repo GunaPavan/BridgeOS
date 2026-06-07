@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, LogIn, Menu, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -51,11 +51,19 @@ export function MarketingNav() {
             );
           })}
           <Link
-            href="/bridges"
-            data-testid="nav-dashboard-cta"
-            className="ml-2 inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-4 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/30 transition-colors hover:bg-primary/25"
+            href="/login"
+            data-testid="nav-signin"
+            className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-1.5 text-sm font-medium text-white/80 transition-colors hover:border-white/30 hover:text-white"
           >
-            Open dashboard
+            <LogIn className="h-3.5 w-3.5" />
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            data-testid="nav-signup"
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-4 py-1.5 text-sm font-medium text-primary ring-1 ring-primary/30 transition-colors hover:bg-primary/25"
+          >
+            Sign up
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </nav>
@@ -84,11 +92,18 @@ export function MarketingNav() {
             </Link>
           ))}
           <Link
-            href="/bridges"
+            href="/login"
+            onClick={() => setOpen(false)}
+            className="mt-2 block rounded-md border border-white/10 px-3 py-2 text-center text-sm font-medium text-white/80"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
             onClick={() => setOpen(false)}
             className="mt-2 block rounded-md bg-primary/15 px-3 py-2 text-center text-sm font-medium text-primary"
           >
-            Open dashboard →
+            Sign up →
           </Link>
         </div>
       ) : null}

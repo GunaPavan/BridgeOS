@@ -172,8 +172,8 @@ export default function SettingsPage() {
           />
           <FeatureToggle
             icon={KeyRound}
-            title="Anonymous demo mode"
-            description="No login required — synthetic data only."
+            title="Cognito RBAC sign-in"
+            description="4 roles (admin · coordinator · donor · patient). PostConfirmation Lambda auto-assigns self-signups."
             enabled
           />
           <FeatureToggle

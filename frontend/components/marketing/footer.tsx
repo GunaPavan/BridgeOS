@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Github, Heart } from "lucide-react";
+import { Heart } from "lucide-react";
 
 export function MarketingFooter() {
   return (
@@ -7,14 +7,14 @@ export function MarketingFooter() {
       className="border-t border-white/5 bg-surface/30 px-6 py-12"
       data-testid="marketing-footer"
     >
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 md:grid-cols-4">
-        <div>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 md:grid-cols-5">
+        <div className="md:col-span-2">
           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-xl font-bold text-transparent">
             Bridge OS
           </span>
           <p className="mt-2 text-xs text-white/50">
             The operating system for Blood Bridges. Built for the AI for Good
-            Hackathon 2026.
+            Hackathon 2026 and deployed live on AWS at bridge-os.click.
           </p>
         </div>
 
@@ -27,6 +27,19 @@ export function MarketingFooter() {
             <li><Link href="/recommendations" className="hover:text-white">Recommendations</Link></li>
             <li><Link href="/simulator" className="hover:text-white">Simulator</Link></li>
             <li><Link href="/agent" className="hover:text-white">Care Agent</Link></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 className="text-xs uppercase tracking-widest text-white/40">
+            Account
+          </h4>
+          <ul className="mt-3 space-y-2 text-sm text-white/70">
+            <li><Link href="/login" className="hover:text-white">Sign in</Link></li>
+            <li><Link href="/signup" className="hover:text-white">Sign up (donor)</Link></li>
+            <li><Link href="/signup" className="hover:text-white">Sign up (patient)</Link></li>
+            <li><Link href="/donor" className="hover:text-white">Donor portal</Link></li>
+            <li><Link href="/patient" className="hover:text-white">Patient portal</Link></li>
           </ul>
         </div>
 
@@ -47,17 +60,16 @@ export function MarketingFooter() {
                 Blood Warriors Foundation
               </a>
             </li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-xs uppercase tracking-widest text-white/40">
-            Hackathon
-          </h4>
-          <ul className="mt-3 space-y-2 text-sm text-white/70">
-            <li>AI for Good 2026</li>
-            <li>Blend360</li>
-            <li>Blood Warriors · HackCulture</li>
+            <li>
+              <a
+                href="https://github.com/GunaPavan/BridgeOS"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white"
+              >
+                Source on GitHub
+              </a>
+            </li>
           </ul>
         </div>
       </div>

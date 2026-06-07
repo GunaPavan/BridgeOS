@@ -65,14 +65,15 @@ export default function AboutPage() {
         <div className="mx-auto max-w-4xl">
           <p className="text-xs uppercase tracking-widest text-accent">About</p>
           <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-            Two engineers, one Blood Warriors mission, one weekend hackathon.
+            Two engineers, one Blood Warriors mission, shipped to production.
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-white/65">
             Bridge OS is built by <span className="text-white">AlgoWarriors</span> —
             a two-person team competing in the AI for Good Hackathon 2026
             (Blend360, with Blood Warriors Foundation and HackCulture as
-            impact partners). Every line of code, model, and integration was
-            written for this challenge.
+            impact partners). Every line of code, model, and AWS integration was
+            written for this challenge and deployed live at
+            <code className="mx-1 rounded bg-white/5 px-1 text-accent">bridge-os.click</code>.
           </p>
         </div>
       </section>
@@ -234,9 +235,11 @@ export default function AboutPage() {
             />
           </div>
           <p className="mt-8 text-sm leading-relaxed text-white/55">
-            Bridge OS was scoped, designed, built, and tested entirely during the
-            hackathon window. Every commit lives in the local repository so the
-            judges can audit the build trail.
+            Bridge OS was scoped, designed, built, deployed, and tested during the
+            hackathon window. Every commit lives in the public GitHub repo so the
+            judges can audit the build trail — and the production stack runs on AWS
+            within the $40 hackathon credit budget (ECS Fargate, RDS, Cognito,
+            Bedrock, SES, SQS, SNS, EventBridge, CloudWatch).
           </p>
         </div>
       </section>
@@ -249,16 +252,22 @@ export default function AboutPage() {
             Want to dig in?
           </h2>
           <p className="mt-4 text-base text-white/60">
-            The whole product is open and clickable. No login. No demo data
-            slideshow.
+            The whole product is clickable. Sign in as a coordinator to run the
+            dashboard, or sign up as a donor or patient to see your own portal.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/bridges"
+              href="/login"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-600"
             >
-              Open dashboard
+              Sign in
               <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              Sign up as donor / patient
             </Link>
             <Link
               href="/how-it-works"
