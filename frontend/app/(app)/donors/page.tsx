@@ -8,7 +8,14 @@ import { DonorCard } from "@/components/ui/donor-card";
 import { api, type BloodGroup, type DonorFilters, type DonorSort } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const BLOOD_GROUPS: BloodGroup[] = ["O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"];
+// Order matches the actual dataset distribution: positives first (most
+// donors), then negatives, then "Unknown" (~30% of guest-pool donors who
+// never confirmed their group) and the rare hh phenotype "Bombay".
+const BLOOD_GROUPS: BloodGroup[] = [
+  "O+", "A+", "B+", "AB+",
+  "O-", "A-", "B-", "AB-",
+  "unknown", "Bombay",
+];
 
 const SORTS: { value: DonorSort; label: string }[] = [
   { value: "name", label: "Name" },
@@ -117,7 +124,7 @@ export default function DonorsPage() {
           {BLOOD_GROUPS.map((bg) => (
             <FilterChip
               key={bg}
-              label={bg}
+              label={bg === "unknown" ? "Unknown" : bg}
               active={bloodGroup === bg}
               onClick={() => setBloodGroup(bg)}
               mono

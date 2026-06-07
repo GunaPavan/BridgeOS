@@ -9,7 +9,13 @@ const API_URL =
 
 // --- Enums ------------------------------------------------------------------
 
-export type BloodGroup = "O+" | "O-" | "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-";
+export type BloodGroup =
+  | "O+" | "O-" | "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-"
+  // Bombay (hh) and unknown — the dataset has 2 Bombay donors and ~2k
+  // "unknown" donors (the Blood Warriors "Do not Know" guest-pool rows),
+  // so the UI filters need to be able to select them.
+  | "Bombay"
+  | "unknown";
 
 export type Language =
   | "en"
