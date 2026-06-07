@@ -113,7 +113,65 @@ def process_inbound_email(
     persisted_email_id = row.id
 
     if patient is None:
+        # Used to silently return here, which meant every demo-button email
+        # reply landed in a black hole (the demo doesn't set the donor's
+        # gmail as a patient.caregiver_email, so the lookup always fails).
+        # Now: still send an LLM-composed acknowledgement back so the loop
+        # closes visibly for the operator. Bedrock classifies the reply
+        # into ACCEPT/DECLINE/MAYBE/STOP/UNCLEAR and writes a 2-line ack.
         db.commit()
+        try:
+            from datetime import datetime as _dt
+
+            from app.integrations import ses_client
+            from app.services.demo_outreach import compose_inbound_reply
+            from app.services.reply_classifier import classify_reply as _classify
+
+            classified = _classify(email_obj.body_text or "", language="en")
+            intent_name = getattr(classified.intent, "name", str(classified.intent))
+            composed = compose_inbound_reply(
+                donor_name="",
+                patient_name="",
+                intent=intent_name,
+                inbound_body=email_obj.body_text or "",
+                language="en",
+            )
+            reply_subject = (
+                f"Re: {email_obj.subject}"
+                if email_obj.subject and not email_obj.subject.lower().startswith("re:")
+                else (email_obj.subject or "Re: your message")
+            )
+            send_result = ses_client.send_email(
+                to=email_obj.from_email,
+                subject=reply_subject,
+                body=composed.text,
+            )
+            # Persist the outbound auto-reply so /emails surfaces it too.
+            db.add(
+                EmailMessage(
+                    direction="outbound",
+                    recipient_email=email_obj.from_email,
+                    from_email=ses_client.from_email(),
+                    subject=reply_subject,
+                    body=composed.text,
+                    template_key=f"unknown_sender_ack_{composed.source}",
+                    language="en",
+                    ses_message_id=send_result.message_id,
+                    status=send_result.status,
+                    is_mock=send_result.is_mock,
+                    error_message=send_result.error_message,
+                    created_at=_dt.utcnow(),
+                    sent_at=_dt.utcnow() if send_result.status in ("sent", "mocked") else None,
+                )
+            )
+            db.commit()
+            logger.info(
+                "unknown-sender auto-reply sent to %s via %s (sid=%s, intent=%s, model=%s)",
+                email_obj.from_email, composed.source, send_result.message_id,
+                intent_name, composed.model,
+            )
+        except Exception:
+            logger.exception("unknown-sender auto-reply failed for %s", email_obj.from_email)
         return InboundEmailProcessResult(
             persisted_email_id=persisted_email_id,
             matched_patient_id=None,
