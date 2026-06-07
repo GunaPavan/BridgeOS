@@ -294,3 +294,23 @@ def auto_post_donation_thank_you(db: Session, now: datetime) -> JobResult:
         items_processed=sent,
         payload={"candidates": len(pings), "sent": sent, "failed": failed},
     )
+
+
+def auto_call_escalation(db: Session, now: datetime) -> JobResult:
+    """E11: scan for ACTIVE OutreachWaves past the urgency threshold without
+    any donor accept, dispatch SMS + voice call to coordinator.
+
+    Threshold per urgency (configurable via env):
+        CRITICAL=2h, HIGH=24h, MEDIUM=72h, PLANNED=120h (5 days)
+    """
+    from app.services.call_escalation import run_escalation_scan
+
+    result = run_escalation_scan(db, now=now)
+    return JobResult(
+        items_processed=result["dispatched"],
+        payload={
+            "candidates": result["candidates_found"],
+            "dispatched": result["dispatched"],
+            "failed": result["failed"],
+        },
+    )

@@ -60,6 +60,10 @@ def _isolate_llm_env(monkeypatch):
         "ANTHROPIC_MODEL",
         "OPENAI_API_KEY",
         "OPENAI_EMBEDDING_MODEL",
+        # Twilio creds — strip so tests run in mock mode regardless of shell
+        "TWILIO_ACCOUNT_SID",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_WHATSAPP_FROM",
     ):
         monkeypatch.delenv(var, raising=False)
 

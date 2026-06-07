@@ -1,0 +1,134 @@
+{
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0, "y": 0, "width": 24, "height": 1,
+      "properties": {
+        "markdown": "# Bridge OS — Ops dashboard\n`team019-bridge-os` · backend at https://api.bridge-os.click · region us-east-1"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 1, "width": 12, "height": 6,
+      "properties": {
+        "title": "ALB — request count + 5xx",
+        "metrics": [
+          ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/team019-bridge-os-alb/4535537c12bd7db8", {"stat": "Sum", "label": "Requests"}],
+          [".", "HTTPCode_Target_5XX_Count", ".", ".", {"stat": "Sum", "label": "5xx errors", "yAxis": "right"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 1, "width": 12, "height": 6,
+      "properties": {
+        "title": "ALB — target response time",
+        "metrics": [
+          ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "app/team019-bridge-os-alb/4535537c12bd7db8", {"stat": "Average"}],
+          ["...", {"stat": "p95"}],
+          ["...", {"stat": "p99"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "SQS dispatch queue — depth",
+        "metrics": [
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "team019-bridge-os-dispatch", {"label": "primary"}],
+          [".", ".", ".", "team019-bridge-os-dispatch-dlq", {"label": "DLQ", "color": "#d62728"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "SES — send + bounce + complaint",
+        "metrics": [
+          ["AWS/SES", "Send", {"label": "sent"}],
+          [".", "Bounce", {"label": "bounce", "color": "#ff7f0e"}],
+          [".", "Complaint", {"label": "complaint", "color": "#d62728"}],
+          [".", "Reject", {"label": "reject", "color": "#9467bd"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16, "y": 7, "width": 8, "height": 6,
+      "properties": {
+        "title": "SNS — publishes per topic",
+        "metrics": [
+          ["AWS/SNS", "NumberOfMessagesPublished", "TopicName", "team019-bridge-os-donor-reply-accept"],
+          ["...", "team019-bridge-os-donor-reply-decline"],
+          ["...", "team019-bridge-os-donor-reply-out-of-town"],
+          ["...", "team019-bridge-os-caregiver-reply-resolved"]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 13, "width": 12, "height": 6,
+      "properties": {
+        "title": "RDS — CPU + connections",
+        "metrics": [
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "team019-bridge-os-pg", {"label": "CPU %"}],
+          [".", "DatabaseConnections", ".", ".", {"label": "conns", "yAxis": "right"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12, "y": 13, "width": 12, "height": 6,
+      "properties": {
+        "title": "ECS — running task count + memory util",
+        "metrics": [
+          ["AWS/ECS", "CPUUtilization", "ServiceName", "team019-bridge-os-backend", "ClusterName", "team019-bridge-os-cluster", {"label": "CPU %"}],
+          [".", "MemoryUtilization", ".", ".", ".", ".", {"label": "Mem %", "yAxis": "right"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0, "y": 19, "width": 8, "height": 6,
+      "properties": {
+        "title": "Lambda — EventBridge scheduler invocations",
+        "metrics": [
+          ["AWS/Lambda", "Invocations", "FunctionName", "team019-bridge-os-scheduler-trigger", {"label": "invocations"}],
+          [".", "Errors", ".", ".", {"label": "errors", "color": "#d62728"}],
+          [".", "Duration", ".", ".", {"label": "duration ms", "yAxis": "right"}]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 60
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8, "y": 19, "width": 8, "height": 6,
+      "properties": {
+        "title": "Bedrock — invocations + token use",
+        "metrics": [
+          ["AWS/Bedrock", "Invocations", "ModelId", "us.anthropic.claude-haiku-4-5-20251001-v1:0"],
+          ["...", "us.anthropic.claude-sonnet-4-5-20250929-v1:0"]
+        ],
+        "view": "timeSeries", "stacked": false, "region": "us-east-1", "period": 300
+      }
+    },
+    {
+      "type": "log",
+      "x": 16, "y": 19, "width": 8, "height": 6,
+      "properties": {
+        "title": "Backend container — recent ERROR / WARNING logs",
+        "query": "SOURCE '/ecs/team019-bridge-os-backend' | filter @message like /ERROR|WARNING/ | sort @timestamp desc | limit 20",
+        "region": "us-east-1"
+      }
+    }
+  ]
+}

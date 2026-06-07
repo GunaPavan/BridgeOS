@@ -1,0 +1,130 @@
+{
+  "family": "team019-bridge-os-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::REDACTED-AWS-ACCOUNT:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::REDACTED-AWS-ACCOUNT:role/team019-bridge-os-task-role",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "REDACTED-AWS-ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/team019-bridge-os-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "BRIDGE_OS_AWS_PREFIX",
+          "value": "team019-bridge-os"
+        },
+        {
+          "name": "BRIDGE_OS_DISABLE_SCHEDULER",
+          "value": "1"
+        },
+        {
+          "name": "BRIDGE_OS_PUBLIC_URL",
+          "value": "https://api.bridge-os.click"
+        },
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql+psycopg://bridgeos:REDACTED-RDS-PASSWORD@team019-bridge-os-pg.cat6g2e6qjsr.us-east-1.rds.amazonaws.com:5432/bridgeos"
+        },
+        {
+          "name": "TWILIO_ACCOUNT_SID",
+          "value": "REDACTED-TWILIO-SID"
+        },
+        {
+          "name": "TWILIO_AUTH_TOKEN",
+          "value": "REDACTED-TWILIO-TOKEN"
+        },
+        {
+          "name": "TWILIO_WHATSAPP_FROM",
+          "value": "whatsapp:+14155238886"
+        },
+        {
+          "name": "TWILIO_VOICE_FROM",
+          "value": "+13853786738"
+        },
+        {
+          "name": "BEDROCK_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "SES_FROM_EMAIL",
+          "value": "ops@bridge-os.click"
+        },
+        {
+          "name": "BRIDGE_OS_COORDINATOR_PHONE",
+          "value": "REDACTED-PHONE"
+        },
+        {
+          "name": "BRIDGE_OS_USE_SECRETS_MANAGER",
+          "value": "0"
+        },
+        {
+          "name": "COGNITO_USER_POOL_ID",
+          "value": "us-east-1_fanxkrBlF"
+        },
+        {
+          "name": "COGNITO_CLIENT_ID",
+          "value": "2uodkgu469969oe4fukh73d7b8"
+        },
+        {
+          "name": "COGNITO_HOSTED_UI_DOMAIN",
+          "value": "team019-bridge-os.auth.us-east-1.amazoncognito.com"
+        },
+        {
+          "name": "COGNITO_REDIRECT_URI",
+          "value": "https://bridge-os.click/login/callback"
+        },
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "https://bridge-os.click,https://www.bridge-os.click,http://localhost:3000,https://main.d12345abc.amplifyapp.com"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/team019-bridge-os-backend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/system/health/full\", timeout=5)' || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ],
+  "tags": [
+    {
+      "key": "Project",
+      "value": "bridge-os"
+    },
+    {
+      "key": "Team",
+      "value": "019"
+    }
+  ]
+}

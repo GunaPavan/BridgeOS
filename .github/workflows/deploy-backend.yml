@@ -1,0 +1,64 @@
+# Build the Bridge OS backend Docker image and push to ECR on every
+# push to main. ECS Express Mode picks up the :latest tag on its next
+# deploy roll (or we can trigger one explicitly with the deploy-service
+# action below).
+name: Deploy backend to ECR + ECS Express
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write   # for OIDC AWS auth
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO: team019-bridge-os-backend
+  ECS_SERVICE: team019-bridge-os-backend
+  ECS_CLUSTER: team019-bridge-os-cluster
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::REDACTED-AWS-ACCOUNT:role/team019-bridge-os-github-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        working-directory: backend
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/${{ env.ECR_REPO }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ env.ECR_REPO }}:latest \
+            .
+          docker push $ECR_REGISTRY/${{ env.ECR_REPO }}:$IMAGE_TAG
+          docker push $ECR_REGISTRY/${{ env.ECR_REPO }}:latest
+
+      - name: Trigger ECS Express Mode rolling deploy
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }} \
+            || echo "(service not yet created — first run only)"

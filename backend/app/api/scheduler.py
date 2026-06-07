@@ -16,6 +16,7 @@ from sqlalchemy import and_, delete, desc, func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.integrations.cognito_auth import require_admin
 from app.models import ScheduledJob, ScheduledJobRun
 from app.scheduler import REGISTRY, get_scheduler
 from app.scheduler.metrics import RUN_STATUS_FAILED, RUN_STATUS_SUCCESS
@@ -165,6 +166,7 @@ def update_job(
     name: str,
     body: JobUpdateRequest,
     db: Session = Depends(get_db),
+    _admin = Depends(require_admin),  # noqa: ARG001 — E14: admin-only
 ) -> JobState:
     if get_spec(name) is None:
         raise HTTPException(
@@ -195,7 +197,7 @@ def update_job(
     response_model=JobState,
     summary="Pause a job — survives restarts",
 )
-def pause_job(name: str) -> JobState:
+def pause_job(name: str, _admin = Depends(require_admin)) -> JobState:
     runtime = get_scheduler()
     if runtime is None:
         raise HTTPException(
@@ -214,7 +216,7 @@ def pause_job(name: str) -> JobState:
     response_model=JobState,
     summary="Resume a paused job",
 )
-def resume_job(name: str) -> JobState:
+def resume_job(name: str, _admin = Depends(require_admin)) -> JobState:
     runtime = get_scheduler()
     if runtime is None:
         raise HTTPException(
@@ -350,7 +352,9 @@ def prune_runs(
     summary="Toggle compressed cadences for live demo",
 )
 def set_demo_mode(
-    body: DemoModeRequest, db: Session = Depends(get_db)
+    body: DemoModeRequest,
+    db: Session = Depends(get_db),
+    _admin = Depends(require_admin),
 ) -> SchedulerStatus:
     runtime = get_scheduler()
     if runtime is None:

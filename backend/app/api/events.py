@@ -105,3 +105,34 @@ def dispatcher_status() -> DispatcherStatus:
         ),
         topics=topics_out,
     )
+
+
+# ---------------------------------------------------------------------------
+# E16 — Lambda subscriber callback
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/lambda-callback",
+    summary="E16: Lambda subscriber callback — Lambda received an SNS event",
+)
+def lambda_callback(payload: dict) -> dict:
+    """Lambda subscribers POST here to log that they received an SNS event.
+
+    The in-process EventDispatcher is the actual side-effect runner; this
+    endpoint just records that the Lambda subscriber also got the event,
+    proving the cross-process redundancy works.
+    """
+    import logging as _log
+    _log.getLogger(__name__).info(
+        "Lambda subscriber callback: topic=%s, donor=%s, patient=%s, lambda_msg=%s",
+        payload.get("topic"),
+        payload.get("donor_id"),
+        payload.get("patient_id"),
+        payload.get("lambda_message_id"),
+    )
+    return {
+        "received": True,
+        "topic": payload.get("topic"),
+        "lambda_message_id": payload.get("lambda_message_id"),
+    }

@@ -45,6 +45,10 @@ class Donor(Base):
 
     # Contact
     phone: Mapped[str] = mapped_column(String(20))
+    # E14.B: donor's email used to link Cognito account → Donor row.
+    # Optional because legacy seed donors don't have one; admin can set it
+    # when the donor signs up via the hosted UI.
+    email: Mapped[Optional[str]] = mapped_column(String(254), nullable=True, index=True)
     preferred_language: Mapped[Language] = mapped_column(String(2), default=Language.ENGLISH)
     # E6: per-donor outbound channel preference. Default = WHATSAPP because
     # it's the only channel where donor replies feed back into the automation

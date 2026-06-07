@@ -17,7 +17,10 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "email-validator>=2.2",  # used by pydantic EmailStr
     "python-dotenv>=1.0",
+    "python-multipart>=0.0.9",  # needed for form-encoded Twilio webhook POSTs
+    "apscheduler>=3.10",  # in-process scheduler until EventBridge takes over
     # Database
     "sqlalchemy>=2.0",
     "alembic>=1.13",
@@ -36,6 +39,7 @@ dependencies = [
     "httpx>=0.27",
     "twilio>=9.3",
     "boto3>=1.35",  # AWS SDK: Location Service, Bedrock, Secrets Manager, etc.
+    "python-jose[cryptography]>=3.3",  # JWT validation for Cognito
 ]
 
 [project.optional-dependencies]

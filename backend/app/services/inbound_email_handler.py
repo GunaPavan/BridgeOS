@@ -157,6 +157,25 @@ def process_inbound_email(
         )
         topic_published = "caregiver-reply-question"
 
+    # E8.1: send an automated reply email back. Different paths per intent:
+    #   RESOLVED/STOP → "we've cancelled, no one else will be contacted"
+    #   URGENT        → "coordinator will call you in 15 min"
+    #   QUESTION      → Bedrock-generated contextual answer using patient data
+    #   UNKNOWN/other → human-handoff template
+    try:
+        from app.services.caregiver_auto_reply import send_caregiver_auto_reply
+
+        send_caregiver_auto_reply(
+            db,
+            patient=patient,
+            intent=classified.intent,
+            incoming_body=email_obj.body_text or "",
+            incoming_subject=email_obj.subject or "",
+        )
+    except Exception:
+        # Never break the loop because the auto-reply failed
+        logger.exception("Auto-reply send failed for patient %s", patient.id)
+
     db.commit()
 
     return InboundEmailProcessResult(

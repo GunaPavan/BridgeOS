@@ -75,6 +75,46 @@ class ParsedInboundEmail:
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 _WHITESPACE_RE = re.compile(r"\s+")
 
+# Patterns that mark the start of quoted content in email replies.
+# We strip everything from these markers onward so the classifier only sees
+# the user's actual new content.
+_QUOTE_MARKERS = [
+    # Gmail: "On Mon, 7 Jun 2026 at 04:11, <foo@bar.com> wrote:"
+    re.compile(r"^On\s.+?\s(at\s|@\s)?.+?wrote:\s*$", re.IGNORECASE | re.MULTILINE),
+    # Outlook / generic: "From: foo@bar.com" / "Sent: ..."
+    re.compile(r"^From:\s.+$", re.IGNORECASE | re.MULTILINE),
+    re.compile(r"^-----\s*Original Message\s*-----", re.IGNORECASE | re.MULTILINE),
+    # WhatsApp / iOS Mail: ">>> On Jun 7"
+    re.compile(r"^>+\s*On\s.+wrote:", re.IGNORECASE | re.MULTILINE),
+]
+
+
+def strip_quoted_content(body: str) -> str:
+    """Remove quoted previous-email content from a reply body.
+
+    Email clients prepend the original message with markers like
+    "On Mon, 7 Jun 2026 at 04:11, <foo@bar.com> wrote:". Lines after that
+    are usually "> ..." quoted. We don't want the classifier reading the
+    ORIGINAL outbound email (which contained instructions like 'reply STOP
+    to cancel') and labelling the new reply as STOP.
+
+    Returns the body with quoted content removed; falls through unchanged
+    if no marker is found.
+    """
+    if not body:
+        return body
+    earliest = len(body)
+    for pat in _QUOTE_MARKERS:
+        m = pat.search(body)
+        if m and m.start() < earliest:
+            earliest = m.start()
+    cleaned = body[:earliest]
+    # Also strip any trailing lines that start with ">" (top-quoted text)
+    lines = cleaned.split("\n")
+    while lines and lines[-1].lstrip().startswith(">"):
+        lines.pop()
+    return "\n".join(lines).strip()
+
 
 def parse_raw_email(raw: bytes) -> ParsedInboundEmail:
     """Parse an RFC 822 byte stream into our internal shape.
@@ -142,11 +182,15 @@ def parse_raw_email(raw: bytes) -> ParsedInboundEmail:
     if not body_text and body_html:
         body_text = strip_html(body_html)
 
+    # Strip quoted-reply markers (Gmail "On X wrote:" / Outlook "From:" / etc.)
+    # so the classifier only reads the user's new content.
+    cleaned_body = strip_quoted_content(body_text.strip())
+
     return ParsedInboundEmail(
         from_email=from_email,
         to_email=to_email,
         subject=subject,
-        body_text=body_text.strip(),
+        body_text=cleaned_body,
         body_html=body_html,
         message_id=message_id,
         received_at=received_at,

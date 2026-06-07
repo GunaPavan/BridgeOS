@@ -12,6 +12,7 @@ from app.models.schedule_log import ScheduleResolveLog
 from app.models.scheduler import ScheduledJob, ScheduledJobRun
 from app.models.reply_classification import ReplyClassification
 from app.models.email_message import EmailMessage
+from app.models.call_escalation import CallEscalation, EscalationStatus, EscalationChannel
 from app.models.swap_request import SlotSwapRequest, SwapStatus
 from app.models.enums import (
     BloodGroup,
@@ -79,6 +80,9 @@ __all__ = [
     "ReplyClassification",
     "ReplyIntent",
     "EmailMessage",
+    "CallEscalation",
+    "EscalationStatus",
+    "EscalationChannel",
     # Alert Allocator
     "OutreachWave",
     "OutreachPing",

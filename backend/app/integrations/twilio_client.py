@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import secrets
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -61,3 +62,80 @@ def send_whatsapp(to_number: str, body: str) -> SendResult:
         body=body,
     )
     return SendResult(sid=msg.sid, is_mock=False, status=msg.status or "queued")
+
+
+def voice_from() -> str:
+    """The phone number Twilio uses to place outbound voice calls.
+
+    Different from the WhatsApp sandbox 'from' — voice needs a real
+    Twilio-purchased number. In trial mode this is the user's Twilio
+    trial number (set via TWILIO_VOICE_FROM).
+    """
+    return _env("TWILIO_VOICE_FROM") or "+13853786738"  # default to user's trial
+
+
+def place_voice_call(
+    *,
+    to_number: str,
+    message: str,
+    twiml_url: Optional[str] = None,
+    ping_id: Optional[str] = None,
+) -> SendResult:
+    """Place an outbound voice call.
+
+    Two modes:
+
+      (a) ``twiml_url`` provided — Twilio fetches the TwiML from that URL
+          when the call connects. This is the bidirectional path: the URL
+          points at ``/twilio/voice/twiml/ask`` which plays the question +
+          opens a ``<Gather speech>`` so the donor can answer.
+
+      (b) ``twiml_url`` omitted — fall back to inline TwiML that just
+          reads ``message`` twice and hangs up (one-way alert mode, used
+          for coordinator escalations).
+
+    Mock mode returns ``MOCK-CALL-...`` SIDs in both cases.
+    """
+    if not is_live():
+        sid = "MOCK-CALL-" + secrets.token_hex(8).upper()
+        return SendResult(sid=sid, is_mock=True, status="mocked")
+
+    from twilio.rest import Client  # type: ignore[import-not-found]
+
+    sid_env = _env("TWILIO_ACCOUNT_SID")
+    auth_env = _env("TWILIO_AUTH_TOKEN")
+    assert sid_env and auth_env, "twilio creds required when is_live()"
+
+    client = Client(sid_env, auth_env)
+
+    if twiml_url:
+        # Bidirectional flow — Twilio GETs the TwiML, plays the prompt,
+        # captures the spoken response, POSTs it back.
+        url = twiml_url
+        if ping_id and "ping_id=" not in url:
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}ping_id={ping_id}"
+        call = client.calls.create(
+            from_=voice_from(),
+            to=to_number,
+            url=url,
+            method="POST",
+        )
+    else:
+        # One-way alert mode
+        import html as _html
+        escaped = _html.escape(message)
+        twiml = (
+            f'<?xml version="1.0" encoding="UTF-8"?>'
+            f'<Response>'
+            f'<Say voice="Polly.Aditi-Neural">{escaped}</Say>'
+            f'<Pause length="1"/>'
+            f'<Say voice="Polly.Aditi-Neural">{escaped}</Say>'
+            f'</Response>'
+        )
+        call = client.calls.create(
+            from_=voice_from(),
+            to=to_number,
+            twiml=twiml,
+        )
+    return SendResult(sid=call.sid, is_mock=False, status=call.status or "queued")

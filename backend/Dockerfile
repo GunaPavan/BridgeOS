@@ -47,8 +47,6 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/app ./app
 COPY pyproject.toml ./
-COPY alembic ./alembic
-COPY alembic.ini ./alembic.ini
 
 # Drop privileges
 RUN useradd -m -u 1000 bridgeos && chown -R bridgeos:bridgeos /app

@@ -76,6 +76,12 @@ def _email_digest_handler():
     return auto_caregiver_email_digest
 
 
+def _call_escalation_handler():
+    from app.scheduler.jobs import auto_call_escalation
+
+    return auto_call_escalation
+
+
 REGISTRY: list[JobSpec] = [
     JobSpec(
         name="auto_run_cycle",
@@ -144,6 +150,19 @@ REGISTRY: list[JobSpec] = [
         demo_cron="*/45 * * * * *",
         default_enabled=True,
         handler_factory=_email_digest_handler,
+    ),
+    JobSpec(
+        name="auto_call_escalation",
+        description=(
+            "Tiered call escalation: scans ACTIVE OutreachWaves whose age "
+            "exceeds the urgency-tier threshold (2h/24h/3d/5d for "
+            "CRITICAL/HIGH/MEDIUM/PLANNED) with no donor accept. SMS the "
+            "coordinator; Twilio Voice call for CRITICAL+HIGH tiers."
+        ),
+        cron="*/15 * * * *",        # every 15 min — catches CRITICAL escalations quickly
+        demo_cron="*/30 * * * * *",  # every 30 seconds in demo
+        default_enabled=True,
+        handler_factory=_call_escalation_handler,
     ),
 ]
 
