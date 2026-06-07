@@ -90,3 +90,12 @@ frontend/.next/
 # Test DB files
 *.sqlite*
 bridge_os.db
+
+# Pitch-deck build artifacts (the deck builder script writes these at repo root)
+/Bridge_OS*.pptx
+/Bridge_OS*.pdf
+/slide-*.jpg
+/build_deck.js
+/package.json
+/package-lock.json
+/node_modules/

@@ -34,6 +34,7 @@ dropped without a duplicate send.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import time
 import uuid
@@ -247,14 +248,16 @@ class DispatchWorker:
             WhatsAppMessage,
         )
 
-        # Append the call-back tail unless the body already has it
+        # Append the call-back tail unless the body already has it.
+        # Coordinator phone comes from BRIDGE_OS_COORDINATOR_PHONE — set via
+        # Secrets Manager in prod, the local .env in dev. Skipped silently
+        # when unset so dev SMS doesn't ship a stale placeholder number.
         body_to_send = env.body
-        coordinator_phone = "+91-9876-543-210"  # TODO: pull from settings
-        callback_tail = (
-            f"\n\nCan't reply? Call coordinator at {coordinator_phone}."
-        )
-        if "call coordinator" not in body_to_send.lower():
-            body_to_send = body_to_send + callback_tail
+        coordinator_phone = os.environ.get("BRIDGE_OS_COORDINATOR_PHONE", "").strip()
+        if coordinator_phone and "call coordinator" not in body_to_send.lower():
+            body_to_send = (
+                f"{body_to_send}\n\nCan't reply? Call coordinator at {coordinator_phone}."
+            )
 
         try:
             result = sns_sms_client.send_sms(to_number=env.to, body=body_to_send)

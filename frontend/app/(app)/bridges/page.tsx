@@ -49,8 +49,7 @@ export default function BridgesPage() {
             Could not load bridges.
           </div>
           <p className="mt-1 text-red-300/80">
-            Make sure the backend is running at{" "}
-            <code className="rounded bg-black/30 px-1">http://localhost:8000</code>. ({error.message})
+            Could not reach the Bridge OS API. ({error.message})
           </p>
         </div>
       ) : null}

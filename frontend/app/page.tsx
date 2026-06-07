@@ -159,11 +159,12 @@ export default function HomePage() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/bridges"
+              href="/login?next=%2Fdashboard"
               data-testid="hero-cta-primary"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-600"
             >
-              Open the dashboard
+              <LogIn className="h-4 w-4" />
+              Sign in to the dashboard
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
@@ -176,16 +177,6 @@ export default function HomePage() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-white/55">
-            <span>Have an account?</span>
-            <Link
-              href="/login"
-              data-testid="hero-cta-signin"
-              className="inline-flex items-center gap-1 rounded-full border border-white/10 px-3 py-1 font-medium text-white/85 hover:border-white/30 hover:text-white"
-            >
-              <LogIn className="h-3 w-3" />
-              Sign in
-            </Link>
-            <span className="text-white/30">·</span>
             <span>New here?</span>
             <Link
               href="/signup"
@@ -195,6 +186,62 @@ export default function HomePage() {
               <UserPlus className="h-3 w-3" />
               Sign up (donor or patient)
             </Link>
+          </div>
+
+          {/* Judge / reviewer demo credentials — prominently surfaced so
+              hackathon reviewers can explore the full dashboard immediately
+              without going through the donor/patient signup flow. The
+              account is in the `admins` Cognito group so every page is
+              visible. */}
+          <div
+            data-testid="judge-credentials-card"
+            className="mx-auto mt-10 max-w-2xl rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5 text-left"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300/90">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Hackathon reviewer access
+                </div>
+                <p className="mt-1 text-sm text-white/80">
+                  The dashboard is auth-gated. Use the account below for full
+                  admin access to every page — donor list, ML cohort health,
+                  simulator, WhatsApp panel, automation engine and the live
+                  demo button.
+                </p>
+              </div>
+              <Link
+                href="/login?next=%2Fdashboard"
+                className="hidden shrink-0 items-center gap-2 rounded-full bg-amber-400/90 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 sm:inline-flex"
+              >
+                Sign in
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-white/5 bg-black/30 p-3 font-mono text-xs">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">
+                  email
+                </p>
+                <p
+                  data-testid="judge-credentials-email"
+                  className="mt-1 text-white"
+                >
+                  gunapavan4321@gmail.com
+                </p>
+              </div>
+              <div className="rounded-lg border border-white/5 bg-black/30 p-3 font-mono text-xs">
+                <p className="text-[10px] uppercase tracking-wider text-white/40">
+                  password
+                </p>
+                <p
+                  data-testid="judge-credentials-password"
+                  className="mt-1 text-white"
+                >
+                  Admin@123#
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Impact strip */}

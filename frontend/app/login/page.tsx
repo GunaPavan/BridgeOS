@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { signIn } from "@/lib/cognito";
@@ -15,6 +15,11 @@ const ROLE_HOMES: Record<string, string> = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // ?next=<urlencoded path> lets the (app) auth guard tell us where the
+  // user originally tried to go, so we land them back there after login
+  // instead of always bouncing to the role default.
+  const nextPath = searchParams?.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -32,8 +37,9 @@ export default function LoginPage() {
       });
       // Persist tokens so subsequent fetches can attach them
       sessionStorage.setItem("idToken", result.tokens.idToken);
-      const home = pickHome(result.groups);
-      router.push(home);
+      const dest =
+        nextPath && nextPath.startsWith("/") ? nextPath : pickHome(result.groups);
+      router.push(dest);
     } catch (e) {
       const code = (e as { code?: string }).code;
       const msg = (e as Error).message ?? "Login failed";

@@ -2,124 +2,254 @@
 
 **The operating system for Blood Bridges.**
 
-Software infrastructure to scale Blood Warriors' Blood Bridge model for recurring thalassemia transfusion care across India.
+AI-driven coordination infrastructure to scale Blood Warriors' Blood Bridge model for recurring thalassemia transfusion care across India.
 
 Built by **AlgoWarriors** — Gunaputra Nagendra Pavan Yedida and Aakash Jangeeti — for the **AI for Good Hackathon 2026** (Blend360, with Blood Warriors Foundation and HackCulture as impact partners).
 
 ---
 
-## What this is
+## 🔑 Reviewer access
 
-Every blood donor app in India is built for *one moment* — a stranger needs blood, find another stranger fast. Thalassemia is the opposite: a child needs compatible blood every 18 days for life. That is not a search problem. It is a *recurring care infrastructure* problem.
+The dashboard is auth-gated. To explore the full suite of features, sign in with the admin account below:
 
-Blood Warriors invented the operational solution — **Blood Bridge**: a fixed cohort of 8–10 voluntary donors permanently assigned to each patient, rotating every 18 days. Bridge OS is the software layer that makes this model scale from 58 patients in Hyderabad to thousands nationally.
+| Field | Value |
+|---|---|
+| Live frontend | **https://main.d3fwu2lhbcn0pw.amplifyapp.com** |
+| Live backend | **https://api.bridge-os.click** |
+| Swagger / OpenAPI | **https://api.bridge-os.click/docs** |
+| Sign-in URL | **https://main.d3fwu2lhbcn0pw.amplifyapp.com/login** |
+| Demo email | `gunapavan4321@gmail.com` |
+| Demo password | `Admin@123#` |
 
-## Five AI systems, one product
-
-| # | System | Stack | Lives at |
-|---|--------|-------|----------|
-| 1 | **Cohort Stability Predictor** | XGBoost (3 horizons) + SHAP TreeExplainer | `/bridges/{id}` Stability panel |
-| 2 | **Rotation Scheduler** | Google OR-Tools CP-SAT | `/bridges/{id}` Schedule tab |
-| 3 | **Live Cohort Simulator** | Stateless re-execution of 1 + 2 + recommender | `/simulator` |
-| 4 | **Multilingual Care Agent + WhatsApp** | AWS Bedrock (Sonnet + Haiku + Titan v2) · Anthropic Claude fallback · mock + Twilio (or mock) | `/agent`, `/whatsapp` |
-| 5 | **Alert Allocator** — global donor outreach engine with five tiers (auto WhatsApp · manual phone queue · final broadcast · external · emergency) | Per-cycle CP-SAT-style assignment, P_accept math, urgency keyed off `gap/cadence`, NULL-safe cooldowns, geo reach-window for emergencies | `/recommendations`, `/manual-calls`, `/analytics`, EMERGENCY button on `/patients/{id}` |
-
-Each one is hot-pluggable — set an env var to flip from mock to live, no code change.
-
-## What's in the box
-
-- **16 multi-page routes**: `/`, `/how-it-works`, `/about`, `/dashboard`, `/bridges`, `/donors`, `/patients`, `/recommendations`, `/manual-calls`, `/simulator`, `/analytics`, `/integrations`, `/whatsapp`, `/agent`, `/settings` (plus `/bridges/[id]`, `/donors/[id]`, `/patients/[id]` detail routes)
-- **50+ backend endpoints** across 11 routers
-- **12 ORM entities**: Patient, Donor, Bridge, BridgeMembership, WhatsAppMessage, AgentMessage, CohortMemory, OutreachWave, OutreachPing, ManualCallQueue, EmergencyEvent, OutreachCooldown
-- **395 backend pytest tests** · **180+ frontend Vitest tests** · live Playwright E2E — every one green
-- **Stability AUC ≥ 0.75** on every horizon (30/60/90 day churn) with XGBoost + SHAP
-- **Cohort RAG memory** with hot-pluggable embeddings (Bedrock Titan v2 / OpenAI / local hash fallback)
-- **React Flow cohort graph** + grid view toggle on `/simulator`
-- **Auto language detection** across 8 Indian scripts in the Care Agent
+That account is in the `admins` Cognito group so every page is accessible (donor list, patient list, bridges, ML cohort health, simulator, WhatsApp panel, automation engine, and the one-click multi-channel demo button on `/system/scheduler`).
 
 ---
 
-## Repository structure
+## The problem
+
+Every blood donor app in India is built for *one moment* — a stranger needs blood, find another stranger fast.
+
+Thalassemia is the opposite: a child needs compatible blood **every 18 days for life**. That is not a search problem. It is a recurring care infrastructure problem.
+
+Blood Warriors invented the operational solution — **Blood Bridge**: a fixed cohort of 8–10 voluntary donors permanently assigned to each patient, rotating every 18 days. Bridge OS is the AI + automation layer that makes this model scale from a few dozen patients in Hyderabad to thousands nationally.
+
+---
+
+## What's deployed
+
+| Surface | Detail |
+|---|---|
+| **84 patients** in RDS Postgres (real Blood Warriors data) |
+| **6,862 donors** with response-rate, donation history, geography |
+| **79 active Blood Bridges** with ML-scored cohort health |
+| **625 bridge memberships** rotating across the cohort |
+| **Four channels live**: Voice (Twilio), WhatsApp (Twilio), SMS (AWS SNS), Email (AWS SES) |
+| **Bedrock LLM** composes every outreach + every inbound reply, in 8 Indian languages |
+| **EventBridge Scheduler** runs 7 background jobs (allocator, escalation, follow-ups) without a human |
+| **One-click demo** on `/system/scheduler` fires all four channels in parallel against the demo target |
+
+---
+
+## 🚀 Five differentiators
+
+| # | System | Stack | Lives at |
+|---|---|---|---|
+| 1 | **Cohort Stability Predictor** | XGBoost (3 horizons: 30/60/90-day churn) + SHAP TreeExplainer | `/bridges/{id}` Stability panel |
+| 2 | **Rotation Scheduler** | Google OR-Tools CP-SAT — assigns every transfusion in 12 months to one donor under deferral + cadence + load balancing in ~50 ms | `/bridges/{id}` Schedule tab |
+| 3 | **Live Cohort Simulator** | Stateless re-execution of stability + scheduler + recommender on a what-if cohort | `/simulator` (drag-drop graph) |
+| 4 | **Multilingual AI Care Agent** | AWS Bedrock (Claude Sonnet 4.5 + Haiku 4.5 + Titan v2) · 8 Indian languages · pgvector cohort memory · hardened against prompt injection | `/agent` |
+| 5 | **Alert Allocator** | Per-cycle CP-SAT-style assignment over urgency-tiered waves · multi-channel outbound · auto-escalation to coordinator phone · emergency geo-broadcast | `/recommendations`, `/analytics`, `EMERGENCY` button on `/patients/{id}` |
+
+Each system is hot-pluggable — flip an env var to switch between mock and live; no code change.
+
+---
+
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         Coordinators                              │
+│        Next.js dashboard (Amplify) — Cognito JWT auth             │
+└──────────────────────────────┬───────────────────────────────────┘
+                               │ HTTPS
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  FastAPI backend on AWS Fargate (api.bridge-os.click via ALB)     │
+│  ┌──────────────┬──────────────────────┬───────────────────────┐ │
+│  │  REST API    │  EventBridge cron    │  In-process SES       │ │
+│  │  (50+ ep)    │  jobs (every 5-15m)  │  inbound poller       │ │
+│  └──────────────┴──────────────────────┴───────────────────────┘ │
+└──────┬───────────────┬───────────────┬───────────────┬───────────┘
+       │               │               │               │
+       ▼               ▼               ▼               ▼
+┌──────────┐  ┌──────────────┐  ┌──────────┐  ┌──────────────┐
+│ RDS PG16 │  │ Bedrock      │  │ SNS+SQS  │  │ Twilio       │
+│ + pgvec  │  │ Sonnet+Haiku │  │ +SES+S3  │  │ Voice + WA   │
+└──────────┘  │ + Titan v2   │  └──────────┘  └──────────────┘
+              └──────────────┘
+                ▲     │
+        Bedrock │     │ EventBridge → 2 Lambda subscribers
+   classifies   │     ▼  + CloudWatch dashboards + Secrets Manager
+   intent       └─────────────────────────────────────────────────
+```
+
+---
+
+## ☁️ AWS services used (16)
+
+| Service | What it does | Why this one |
+|---|---|---|
+| **Amazon Bedrock** | Hosts Claude Sonnet 4.5 (outreach + Care Agent), Haiku 4.5 (intent classifier), Titan v2 (1024-dim embeddings). | Native AWS, no separate API key, no data egress, billed in one account. |
+| **AWS Polly** (via Twilio Say) | TTS for the voice call (`Polly.Kajal-Neural`, Indian English). | Best en-IN Neural voice that reads "B positive" and "Tuesday ninth" correctly. |
+| **Amazon SES** | Sends outreach emails (verified `bridge-os.click` domain) AND receives donor replies (raw `.eml` dropped to S3 by a receipt rule). | IAM-only auth, native S3 inbound, free up to 1k inbound/month. |
+| **Amazon SNS** | Topic fan-out for `caregiver-reply-*` and `donor-status-*` events, AND outbound direct-SMS to donors via `BLDWAR` sender ID. | One bus, many subscribers (Lambda, in-process, SQS); free SMS path for India. |
+| **Amazon SQS** | Dispatch queue for outbound messages + DLQ for poison messages. | At-least-once delivery + retry safety: a failed Twilio send is replayed, never lost. |
+| **Amazon Cognito** | User pool, JWT auth, hosted UI, RBAC groups (`admins`, `donors`, `patients`), PostConfirmation Lambda trigger. | Free tier, plugs into FastAPI as a JWT validator, supports per-role portals. |
+| **Amazon RDS** (Postgres 16 + pgvector) | Primary DB + 1024-dim vector store for the Care Agent's cohort memory. | One DB for relational + vector — no separate Pinecone / Weaviate to provision. |
+| **Amazon S3** | Stores raw inbound `.eml` files dropped by the SES receipt rule. | Durable cheap storage; SES integrates natively. |
+| **Amazon EventBridge Scheduler** | Managed cron firing the allocator cycle, expiry sweep, call escalation, SES inbound poller, etc. | Replaced APScheduler so we don't need an always-on worker for cron. |
+| **AWS Secrets Manager** | Holds Twilio credentials, DB URL, SES from-address. ECS pulls at boot. | Secrets stay out of git + task def env; rotation possible without redeploy. |
+| **Amazon ECS Fargate** | Runs the FastAPI container; an ALB fronts it at `api.bridge-os.click`. | Serverless containers, no node management, only pay for vCPU-seconds used. |
+| **Amazon ECR** | Private Docker registry for `team019-bridge-os-backend`. | Required by Fargate; OIDC-authed push from GitHub Actions — no IAM key. |
+| **AWS Amplify Hosting** | Builds + serves the Next.js frontend at `main.d3fwu2lhbcn0pw.amplifyapp.com`. | Zero-config Next.js builds, branch-tied previews, free SSL + edge caching. |
+| **Amazon CloudWatch** | Dashboard + alarms on SQS depth, SES bounce rate, RDS CPU. | Free metrics + alarms in Free Tier; same console as everything else. |
+| **AWS Lambda** | 2 subscribers on the `caregiver-reply-*` topics handling side effects. | Serverless side effects — no extra container, scales to zero. |
+| **Amazon Route 53** | DNS + MX records for `bridge-os.click` (MX points at SES inbound). | Required so SES can receive mail at our domain. |
+
+---
+
+## 🤖 ML models / classical algorithms (7)
+
+| Model | Predicts / decides | Why this one |
+|---|---|---|
+| **XGBoost — Cohort Stability Predictor** | Probability a Blood Bridge collapses in 30 / 60 / 90 days. | Best on small tabular medical data; SHAP TreeExplainer gives clinician trust. |
+| **Multi-class Churn Classifier** (bake-off winner of 6: XGB, RF, LR, GBM, CatBoost, LGBM) | Donor will churn vs. stay vs. lapse. | Bakeoff picks the model objectively per metric (AUC + calibration). |
+| **Survival (time-to-event) model** (bake-off winner of 5: Cox PH, RSF, Weibull AFT, DeepSurv, GBSA) | Days until a donor likely stops responding. | Survival > classification when "when" matters; risk score informs urgency. |
+| **SHAP TreeExplainer** | Per-feature explanations on the stability + churn outputs. | Shows judges WHY the model said "at risk" instead of a black box. |
+| **OR-Tools CP-SAT — Rotation Scheduler** | Assigns donors to slots respecting cooldowns, blood-type compat, geo. | Hard constraints that ML can't enforce — CP-SAT is the SOTA free solver. |
+| **Bedrock Claude Sonnet 4.5** | Composes the 4-channel outreach copy + powers the Care Agent. | Strongest reasoning + multilingual (8 Indian languages) in one call. |
+| **Bedrock Claude Haiku 4.5** | Classifies inbound replies (YES / NO / MAYBE / question / abuse / opt-out). | 12× cheaper + 5× faster than Sonnet; identical accuracy on short labelled intents. |
+| **Bedrock Titan Embed v2** | 1024-dim embeddings for pgvector cohort memory. | Native AWS embedding model, no API key, cheap, good semantic match. |
+
+---
+
+## 🛠️ Tech stack
+
+| Layer | Pick | Why |
+|---|---|---|
+| Backend framework | **FastAPI** + Pydantic v2 | Async, auto OpenAPI docs, strict schemas — judges can browse `/docs`. |
+| DB | **SQLAlchemy 2.0** + Alembic + psycopg3 | Mature ORM, real migrations, async-ready driver. |
+| Vector search | **pgvector** inside RDS | No second DB; cosine similarity in SQL alongside relational rows. |
+| ML libs | xgboost · scikit-learn · shap · ortools | Tabular ML + explainability + constraint solver in 4 libs. |
+| Cron | APScheduler locally → **EventBridge Scheduler** in prod | Same job code, no infrastructure when scaling out. |
+| Frontend | **Next.js 14 App Router** + React 18 + TypeScript | Modern, SSR + client mix, server actions ready. |
+| Data fetching | **TanStack Query** | Caching, polling, optimistic updates — judges see the live engine ticking. |
+| UI | Tailwind + Framer Motion + lucide-react | Fast styling, smooth animations, consistent icons. |
+| Graph UI | **reactflow** | Cohort simulator's drag-drop graph (Differentiator #3). |
+| Auth | **amazon-cognito-identity-js** | Direct Cognito flows (signup + Hosted UI). |
+| Telephony | **Twilio SDK** | Voice + WhatsApp + webhook signatures from one vendor. |
+| Containerisation | Docker + buildx | Single image goes through ECR → ECS Fargate. |
+| CI/CD | GitHub Actions OIDC → ECR/ECS · Amplify CI → frontend | No long-lived AWS keys; auto-deploys on `push main`. |
+| Tests | pytest + factory-boy (backend) · Playwright + Vitest (frontend) | Unit + integration + E2E coverage on both halves. |
+
+---
+
+## 📁 Repository layout
 
 ```
 bridge-os/
-├── backend/                     # FastAPI + SQLAlchemy + ML services
+├── README.md                          # this file
+├── .github/workflows/                 # GitHub Actions OIDC → ECR/ECS
+├── amplify.yml                        # Amplify build config (frontend)
+│
+├── backend/                           # FastAPI + SQLAlchemy + ML services
+│   ├── Dockerfile                     # multi-stage build → ECS Fargate
 │   ├── app/
-│   │   ├── api/                 # 10 API routers
-│   │   ├── models/              # SQLAlchemy entities
-│   │   ├── schemas/             # Pydantic schemas
-│   │   ├── ml/                  # XGBoost stability + OR-Tools scheduler
-│   │   ├── simulator/           # Stateless what-if engine
-│   │   ├── recommender/         # Composite candidate scorer
-│   │   ├── agent/               # LLM care agent (AWS Bedrock / Anthropic / mock)
-│   │   ├── integrations/        # Twilio + eRaktKosh + ICMR mocks
-│   │   └── synthetic/           # Synthetic data generator
-│   ├── tests/                   # 170 pytest tests
-│   ├── scripts/                 # seed.py + train_stability.py
-│   └── data/models/             # Saved XGBoost JSON + SHAP report
-├── frontend/                    # Next.js 14 App Router
-│   ├── app/                     # Routes (marketing + (app) layout group)
-│   ├── components/
-│   │   ├── ui/                  # Reusable primitives
-│   │   └── marketing/           # Marketing nav + footer
-│   ├── lib/                     # API client, utils
-│   ├── tests/                   # 99 Vitest tests
-│   └── e2e/                     # 59 live Playwright tests
-├── docs/                        # ARCHITECTURE · DATA_MODEL · API · DEMO_SCRIPT
-├── infra/                       # (reserved for production deploy config)
-└── docker-compose.yml           # Postgres 16 + pgvector for production parity
+│   │   ├── api/                       # 15 routers — donors, patients, bridges,
+│   │   │                              # whatsapp, agent, admin_demo, admin_system,
+│   │   │                              # analytics, scheduler, emails, …
+│   │   ├── models/                    # SQLAlchemy entities
+│   │   ├── schemas/                   # Pydantic schemas
+│   │   ├── ml/                        # XGBoost stability + churn + survival + OR-Tools
+│   │   ├── agent/                     # Bedrock chat client + cohort memory + language detect
+│   │   ├── services/                  # demo_outreach, reply_classifier, caregiver_auto_reply, …
+│   │   ├── integrations/              # twilio_client, sns_sms_client, ses_client, aws, …
+│   │   ├── outreach/                  # CP-SAT allocator, dispatch queue, inbound email poller
+│   │   ├── events/                    # SNS publishers + subscribers (in-process + Lambda)
+│   │   └── scheduler/                 # EventBridge-compatible cron jobs
+│   ├── scripts/                       # seed.py, ingest_real_dataset.py, train_*
+│   ├── data/Dataset.csv               # Blood Warriors real data (7034 rows)
+│   ├── models/                        # Pre-trained joblibs (churn + survival)
+│   └── tests/                         # pytest + factory-boy
+│
+└── frontend/                          # Next.js 14 App Router
+    ├── app/
+    │   ├── (app)/                     # 🔒 Auth-gated dashboard routes
+    │   │   ├── layout.tsx             # session check → redirect to /login?next=…
+    │   │   ├── dashboard, bridges, donors, patients, analytics,
+    │   │   ├── simulator, agent, whatsapp, recommendations,
+    │   │   ├── system/scheduler       # ← Automation engine + demo button
+    │   │   ├── settings, integrations, donor, patient
+    │   │   └── outreach, emails, [id] detail routes
+    │   ├── login, signup              # Cognito direct
+    │   ├── how-it-works, about
+    │   └── page.tsx                   # Landing (with reviewer credentials card)
+    ├── components/
+    │   ├── ui/                        # 80+ presentational components
+    │   └── marketing/                 # Hero, footer, nav
+    └── lib/
+        ├── api.ts                     # Typed FastAPI client (~2k lines)
+        ├── cognito.ts                 # Sign-in / sign-up / token helpers
+        └── utils.ts
 ```
 
 ---
 
-## Quick start
+## 🛟 Local development
 
 ```bash
 # ----- Backend (FastAPI, SQLite by default) -----
 cd backend
 python -m venv .venv
-.venv\Scripts\activate            # Windows
-# source .venv/bin/activate       # macOS / Linux
+.venv\Scripts\activate                  # Windows
+# source .venv/bin/activate              # macOS / Linux
 pip install -e ".[dev]"
-python -m scripts.seed             # Seed synthetic data
-python -m scripts.train_stability  # Train XGBoost models
-pytest                             # 170 tests should pass
-uvicorn app.main:app --reload      # http://localhost:8000
+python -m scripts.seed --source data/Dataset.csv  # populate from Blood Warriors data
+pytest                                  # ~400 tests should pass
+uvicorn app.main:app --reload           # http://localhost:8000
 
 # ----- Frontend (Next.js 14) -----
-cd frontend
+cd ../frontend
 npm install
-npm test                           # Vitest, 99 tests
-npm run dev                        # http://localhost:3000
-npx playwright test --workers=1    # 59 E2E (needs backend running)
+cp .env.local.example .env.local        # then edit NEXT_PUBLIC_* values
+npm run dev                             # http://localhost:3000
+npx playwright test --workers=1         # 59 E2E (needs backend running)
 ```
 
-Open <http://localhost:3000> and you're in.
+Open <http://localhost:3000>, sign in with the reviewer credentials at the top, and you're in.
 
 ---
 
-## Going live (optional)
+## 🌍 Going live (optional)
 
 Every external system is hot-pluggable via env vars. Without any of these set, everything runs in mock mode for the demo.
 
 ```bash
 # Care Agent — AWS Bedrock multi-model (preferred for production)
 # Routes chat -> Sonnet, intent -> Haiku, embeddings -> Titan v2.
-# See docs/model_routing.md for cost + IAM details.
 export BEDROCK_REGION=us-east-1
-# Optional model overrides:
-# export BEDROCK_SONNET_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
-# export BEDROCK_HAIKU_ID=anthropic.claude-3-haiku-20240307-v1:0
-# export BEDROCK_TITAN_ID=amazon.titan-embed-text-v2:0
 
-# Fallback: Anthropic direct (used if BEDROCK_REGION is unset)
+# Anthropic direct fallback (used if BEDROCK_REGION is unset)
 export ANTHROPIC_API_KEY=sk-ant-...
-export ANTHROPIC_MODEL=claude-haiku-4-5         # optional
 
-# WhatsApp via Twilio
+# WhatsApp + Voice via Twilio
 export TWILIO_ACCOUNT_SID=AC_...
 export TWILIO_AUTH_TOKEN=...
-export TWILIO_WHATSAPP_FROM=whatsapp:+14155238886  # default = sandbox number
+export TWILIO_WHATSAPP_FROM=whatsapp:+14155238886    # default = sandbox
+export TWILIO_VOICE_FROM=+1XXXXXXXXXX
+
+# AWS SES (email) + SNS (SMS) + Cognito + Bedrock
+# all picked up via the default boto3 chain (~/.aws/credentials).
 
 # Postgres + pgvector instead of local SQLite
 docker compose up -d
@@ -128,30 +258,17 @@ export DATABASE_URL=postgresql+psycopg://bridge:bridge@localhost:5432/bridge_os
 
 ---
 
-## Tech stack
-
-| Layer | Choice |
-|---|---|
-| Backend | FastAPI · SQLAlchemy 2 · Pydantic · Postgres 16 + pgvector (or SQLite) |
-| ML | XGBoost (3 churn horizons) · SHAP TreeExplainer · Google OR-Tools (CP-SAT) |
-| LLM | AWS Bedrock multi-model (Claude Sonnet + Haiku + Titan v2) · Anthropic Claude direct fallback · rule-based mock |
-| Comms | Twilio WhatsApp (real or mocked) |
-| Mocks | eRaktKosh blood-bank inventory · ICMR Rare Donor Registry |
-| Frontend | Next.js 14 (App Router) · TypeScript · Tailwind · TanStack Query · Framer Motion · Lucide |
-| Testing | pytest · Vitest + React Testing Library · Playwright (live E2E) |
-
----
-
-## Documentation
+## 📚 Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — every phase, every module, every test count
 - [Data model](docs/DATA_MODEL.md) — entities, relationships, enums
 - [API](docs/API.md) — every endpoint with method + path + purpose
+- [Events](docs/EVENTS.md) — SNS topic catalogue + subscriber side effects
 - [Demo script](docs/DEMO_SCRIPT.md) — the 4-minute walkthrough + Q&A canned answers
 
 ---
 
-## Credits
+## 👥 Credits
 
 - **Team AlgoWarriors** — Gunaputra Nagendra Pavan Yedida, Aakash Jangeeti
 - **Hackathon** — AI for Good 2026 · Blend360 · impact partners: Blood Warriors Foundation + HackCulture

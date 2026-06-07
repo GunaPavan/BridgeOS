@@ -143,8 +143,7 @@ export default function DonorsPage() {
             Could not load donors.
           </div>
           <p className="mt-1 text-red-300/80">
-            Backend should be running at{" "}
-            <code className="rounded bg-black/30 px-1">http://localhost:8000</code>. ({error.message})
+            Could not reach the Bridge OS API. ({error.message})
           </p>
         </div>
       ) : null}
