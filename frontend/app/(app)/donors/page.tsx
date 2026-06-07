@@ -22,7 +22,8 @@ export default function DonorsPage() {
   const [search, setSearch] = useState("");
   const [bloodGroup, setBloodGroup] = useState<BloodGroup | null>(null);
   const [activeOnly, setActiveOnly] = useState(true);
-  const [kellOnly, setKellOnly] = useState(false);
+  // Kell-negative filter removed: the Blood Warriors dataset doesn't carry
+  // the kell-negative column, so the checkbox always returned an empty set.
   const [sort, setSort] = useState<DonorSort>("name");
 
   const filters: DonorFilters = {
@@ -30,7 +31,6 @@ export default function DonorsPage() {
     search: search || undefined,
     blood_group: bloodGroup ?? undefined,
     is_active: activeOnly ? true : undefined,
-    kell_negative: kellOnly ? true : undefined,
     sort,
     order: sort === "name" || sort === "age" ? "asc" : "desc",
   };
@@ -89,16 +89,6 @@ export default function DonorsPage() {
               className="h-3.5 w-3.5 accent-primary"
             />
             Active only
-          </label>
-
-          <label className="flex items-center gap-2 text-sm text-white/70">
-            <input
-              type="checkbox"
-              checked={kellOnly}
-              onChange={(e) => setKellOnly(e.target.checked)}
-              className="h-3.5 w-3.5 accent-accent"
-            />
-            Kell-negative only
           </label>
 
           <div className="ml-auto flex items-center gap-2 text-sm text-white/70">

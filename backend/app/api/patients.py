@@ -54,8 +54,24 @@ def _short_handle(external_id: str | None) -> str | None:
     return (s[:6] or None).upper() if s else None
 
 
-def _to_list_item(patient: Patient) -> PatientListItem:
+def _to_list_item(
+    patient: Patient,
+    *,
+    ml_health_override: BridgeHealth | None = None,
+) -> PatientListItem:
+    """Serialise a patient. ``ml_health_override`` lets the caller swap in
+    the analytics ML-derived cohort health so /patients and /analytics
+    agree on every patient's status; we keep the stub field name on the
+    wire for backwards compat but populate it from the same predictor
+    output the analytics donut uses."""
     bridge = patient.bridge
+    bh: BridgeHealth | None
+    if ml_health_override is not None:
+        bh = ml_health_override
+    elif bridge is not None:
+        bh = bridge.health
+    else:
+        bh = None
     return PatientListItem(
         id=patient.id,
         external_handle=_short_handle(patient.external_id),
@@ -74,9 +90,65 @@ def _to_list_item(patient: Patient) -> PatientListItem:
         days_until_transfusion=patient.days_until_transfusion,
         active=patient.active,
         has_bridge=bridge is not None,
-        bridge_health=bridge.health if bridge else None,
+        bridge_health=bh,
         active_donor_count=bridge.active_donor_count if bridge else 0,
     )
+
+
+def _compute_ml_health_by_bridge(
+    db: Session, patients: list[Patient]
+) -> dict[uuid.UUID, BridgeHealth]:
+    """For the patient list endpoint: compute the SAME ml_health number the
+    /analytics donut uses, once per unique bridge in the current page.
+    Returns {bridge_id: ml_health}. Empty if the churn predictor is missing
+    or every patient is bridgeless."""
+    bridge_ids: set[uuid.UUID] = {
+        p.bridge.id for p in patients if p.bridge is not None
+    }
+    if not bridge_ids:
+        return {}
+    try:
+        from app.api.stability import _combined_ml_health
+        from app.ml.stability import extract_features, get_predictor
+    except Exception:
+        return {}
+    try:
+        predictor = get_predictor()
+    except Exception:
+        return {}
+    if predictor is None:
+        return {}
+    today = date.today()
+    out: dict[uuid.UUID, BridgeHealth] = {}
+    # Fetch bridges with memberships in one go.
+    bridges = (
+        db.execute(
+            select(Bridge)
+            .options(joinedload(Bridge.memberships).joinedload(BridgeMembership.donor))
+            .where(Bridge.id.in_(bridge_ids))
+        )
+        .unique()
+        .scalars()
+        .all()
+    )
+    for bridge in bridges:
+        active = [m for m in bridge.memberships if m.status == MembershipStatus.ACTIVE]
+        if not active:
+            out[bridge.id] = BridgeHealth.CRITICAL
+            continue
+        try:
+            features = [extract_features(m.donor, bridge, today) for m in active]
+            preds = predictor.predict_batch(features)
+            avg = sum(p.churn_90d for p in preds) / len(preds)
+            out[bridge.id] = _combined_ml_health(
+                avg,
+                len(active),
+                patient_cadence_days=bridge.patient_cadence_days,
+                db=db,
+            )
+        except Exception:
+            out[bridge.id] = bridge.health  # fall back to stub
+    return out
 
 
 @router.get("", response_model=PatientsPage, summary="List patients with filters")
@@ -134,7 +206,20 @@ def list_patients(
 
     patients = db.execute(list_stmt).unique().scalars().all()
 
-    items = [_to_list_item(p) for p in patients]
+    # Single source of truth for "Cohort health" — use the same ML-derived
+    # value the /analytics donut shows, computed once per bridge in this
+    # page (typically 50-60 bridges max). Falls back to bridge.health stub
+    # if the churn predictor isn't loaded.
+    ml_health_by_bridge = _compute_ml_health_by_bridge(db, patients)
+    items = [
+        _to_list_item(
+            p,
+            ml_health_override=(
+                ml_health_by_bridge.get(p.bridge.id) if p.bridge else None
+            ),
+        )
+        for p in patients
+    ]
 
     # Optional post-filter for bridge_health (can't easily do in SQL because it's derived)
     if bridge_health is not None:

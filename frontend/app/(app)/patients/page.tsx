@@ -14,7 +14,13 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const BLOOD_GROUPS: BloodGroup[] = ["O+", "A+", "B+", "AB+"];
+// Full ABO + Rh set so patients can be filtered for any blood type the
+// dataset carries (the donors page already supports this; patients was
+// missing the four Rh-negative options).
+const BLOOD_GROUPS: BloodGroup[] = [
+  "O+", "A+", "B+", "AB+",
+  "O-", "A-", "B-", "AB-",
+];
 const HEALTHS: { value: BridgeHealth; label: string }[] = [
   { value: "stable", label: "Stable" },
   { value: "at_risk", label: "At risk" },
