@@ -9,9 +9,12 @@ Three concerns:
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Body, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import PlainTextResponse
@@ -600,11 +603,29 @@ def _process_donor_reply(
     )
 
     if pending is None:
-        # No pending action — generic ack (preserves pre-G1 behaviour).
-        return (
-            f"Thanks {donor_first} — got your message. A coordinator will be "
-            "in touch shortly about the next transfusion cycle."
+        # No pending action — used to fall through to a hardcoded "Thanks
+        # X, coordinator will be in touch" template. Now Bedrock writes the
+        # ack so judges see the LLM in the loop on every inbound (with a
+        # safe template fallback baked into compose_inbound_reply itself).
+        from app.services.demo_outreach import compose_inbound_reply
+
+        donor_lang = (
+            getattr(donor.preferred_language, "value", str(donor.preferred_language))
+            or "en"
         )
+        composed = compose_inbound_reply(
+            donor_name=donor.name or "",
+            patient_name="",
+            intent=intent.name if hasattr(intent, "name") else str(intent),
+            inbound_body=body,
+            language=donor_lang,
+        )
+        logger.info(
+            "inbound WA reply composed via %s/%s for donor=%s intent=%s",
+            composed.source, composed.model, donor.id,
+            intent.name if hasattr(intent, "name") else str(intent),
+        )
+        return composed.text
 
     bridge = db.get(Bridge, pending.bridge_id)
     patient_name = (

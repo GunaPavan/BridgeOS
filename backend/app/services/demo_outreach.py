@@ -348,3 +348,172 @@ def compose_outreach(
         tokens_in=resp.tokens_in,
         tokens_out=resp.tokens_out,
     )
+
+
+# ===========================================================================
+# Inbound reply composer — Bedrock writes the auto-reply WhatsApp/SMS sees
+# when a donor responds to an outreach. Previously every reply path fell
+# through to a static "Thanks {donor_first} — got your message" template.
+# ===========================================================================
+
+
+_INBOUND_SYSTEM_PROMPT = """You write SHORT donor-facing WhatsApp / SMS / email
+acknowledgements for Bridge OS. The donor has just replied to an outreach.
+
+INPUTS you'll get: the donor's first name, the patient's first name, the
+classified intent (one of: ACCEPT / DECLINE / MAYBE / QUESTION / STOP /
+UNCLEAR), the donor's actual reply text, an optional next-step hint, and a
+target language code (en / hi / te / ta / mr / bn / kn / gu).
+
+GROUND RULES:
+
+1. FACT DISCIPLINE. Never invent slot dates, hospitals, blood units, prior
+   donation counts, or coordinator names. If the next-step hint doesn't
+   give you a fact, omit it — don't guess.
+
+2. TONE. Peer-to-peer, warm but direct. No "you saved a life", no "we
+   urgently need you", no exclamation marks beyond one greeting if any.
+
+3. PER-INTENT SHAPE (each reply ≤ 2 short sentences):
+   - ACCEPT  → confirm the donor is on the list; mention the coordinator
+     will share exact time + place separately. Don't promise specific times.
+   - DECLINE → thank the donor for replying so we can find an alternate.
+     No guilt, no second-ask, no "are you sure".
+   - MAYBE   → say the slot stays open and you'll follow up closer to the
+     date. Don't ask any new questions.
+   - QUESTION → acknowledge you'll forward to a coordinator who'll reply
+     within a few hours. Don't try to answer medical questions yourself.
+   - STOP    → confirm you're cancelling future outreach for this person.
+     No "are you sure" — respect the opt-out the first time.
+   - UNCLEAR → brief acknowledgement + say a coordinator will follow up.
+
+4. LANGUAGE. For non-en codes, write in the native script (Devanagari /
+   Telugu / Tamil etc.). Names and the literal "Bridge OS" stay in Latin.
+
+5. NO MARKDOWN, NO EMOJI, NO LINKS, NO PHONE NUMBERS, NO TIMESTAMPS.
+
+OUTPUT: just the reply text, nothing else — no JSON, no quote marks, no
+prefix like "Reply:". A single paragraph. ≤ 220 chars for ASCII, ≤ 160
+chars for Unicode scripts. End in a full stop, never a question mark
+unless the intent is QUESTION."""
+
+
+@dataclass(frozen=True)
+class InboundReply:
+    text: str
+    source: str  # "bedrock" | "anthropic" | "mock" | "template_fallback"
+    model: str
+    tokens_in: Optional[int] = None
+    tokens_out: Optional[int] = None
+
+
+_INBOUND_INTENT_TEMPLATES: dict[str, str] = {
+    # Used only when Bedrock is unreachable or returns garbage. Kept tight
+    # so the fallback reads cleanly even though it's not LLM-written.
+    "ACCEPT": "Thanks {donor} — confirmed for {patient}. Our coordinator will share the exact time and hospital separately.",
+    "DECLINE": "Got it {donor}, thanks for replying — we'll line up an alternate donor for {patient}. You stay on the bridge for future cycles.",
+    "MAYBE": "Thanks {donor} — we'll keep the slot open and follow up closer to the date.",
+    "QUESTION": "Thanks {donor} — a coordinator will get back to you within a few hours on this.",
+    "STOP": "Understood, {donor} — we've stopped future outreach for you. Reply START anytime to resume.",
+    "UNCLEAR": "Thanks {donor} — a coordinator will follow up shortly.",
+}
+
+
+def _normalise_intent(raw: str) -> str:
+    """Map the various Intent / ReplyIntent enums onto the 6 canonical
+    inbound-reply intents the prompt knows about."""
+    up = (raw or "").upper()
+    if up in {"ACCEPT", "YES", "RESOLVED_ACCEPT"}:
+        return "ACCEPT"
+    if up in {"DECLINE", "NO", "RESOLVED_DECLINE"}:
+        return "DECLINE"
+    if up in {"MAYBE", "TENTATIVE"}:
+        return "MAYBE"
+    if up in {"QUESTION", "UNRELATED_QUESTION"}:
+        return "QUESTION"
+    if up in {"STOP", "OPT_OUT", "UNSUBSCRIBE"}:
+        return "STOP"
+    return "UNCLEAR"
+
+
+def _inbound_template_fallback(*, donor_first: str, patient_first: str, intent: str) -> InboundReply:
+    template = _INBOUND_INTENT_TEMPLATES.get(intent, _INBOUND_INTENT_TEMPLATES["UNCLEAR"])
+    text = template.format(donor=donor_first or "there", patient=patient_first or "the patient")
+    return InboundReply(
+        text=text,
+        source="template_fallback",
+        model="bridge-os-template-v1",
+    )
+
+
+def compose_inbound_reply(
+    *,
+    donor_name: str,
+    patient_name: str,
+    intent: str,
+    inbound_body: str,
+    language: str = "en",
+    next_step_hint: Optional[str] = None,
+) -> InboundReply:
+    """Bedrock-compose the auto-reply to a donor's inbound message.
+
+    Returns InboundReply.text (single short paragraph, target-language).
+    Falls back to a deterministic template on any LLM failure so the donor
+    never sees a half-broken acknowledgement.
+    """
+    donor_first = ((donor_name or "").split() or ["there"])[0]
+    patient_first = ((patient_name or "").split() or ["the patient"])[0]
+    canonical = _normalise_intent(intent)
+    lang = (language or "en").lower().strip()
+    if lang not in _VALID_LANGS:
+        lang = "en"
+
+    try:
+        provider = llm_client.get_active_provider()
+        if provider == "mock":
+            return _inbound_template_fallback(
+                donor_first=donor_first, patient_first=patient_first, intent=canonical,
+            )
+        user_prompt = (
+            f"donor_first_name: {donor_first}\n"
+            f"patient_first_name: {patient_first}\n"
+            f"intent: {canonical}\n"
+            f"inbound_message: {(inbound_body or '').strip()[:400]}\n"
+            f"next_step_hint: {(next_step_hint or '').strip()[:200] or '(none)'}\n"
+            f"target_language: {lang}\n\n"
+            "Write the reply now. One paragraph, no quotes, no JSON."
+        )
+        resp = llm_client.chat(
+            system_prompt=_INBOUND_SYSTEM_PROMPT,
+            messages=[ChatMessage(role="user", content=user_prompt)],
+            max_tokens=200,
+            temperature=0.3,
+            task="chat",
+        )
+    except Exception:
+        logger.exception("compose_inbound_reply: LLM call raised — using template")
+        return _inbound_template_fallback(
+            donor_first=donor_first, patient_first=patient_first, intent=canonical,
+        )
+
+    text = (resp.text or "").strip()
+    # Strip stray quote marks / json braces the model sometimes adds.
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+    if text.startswith("{") or len(text) < 8:
+        # Model misfired — fall back rather than ship garbage.
+        logger.warning(
+            "compose_inbound_reply: %s returned unusable text=%r — falling back",
+            resp.provider, text[:200],
+        )
+        return _inbound_template_fallback(
+            donor_first=donor_first, patient_first=patient_first, intent=canonical,
+        )
+
+    return InboundReply(
+        text=text,
+        source=resp.provider,
+        model=resp.model,
+        tokens_in=resp.tokens_in,
+        tokens_out=resp.tokens_out,
+    )
