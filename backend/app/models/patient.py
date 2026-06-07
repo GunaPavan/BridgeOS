@@ -37,7 +37,10 @@ class Patient(Base):
     age: Mapped[int] = mapped_column(Integer)
 
     # Clinical
-    blood_group: Mapped[BloodGroup] = mapped_column(String(3))
+    # String(10) — see donor.py for the same fix. ABO/Rh codes ≤ 3 chars but
+    # the BloodGroup enum also has 'Bombay' (6) and 'unknown' (7) for guest-
+    # pool donors/patients sourced from the Blood Warriors CSV.
+    blood_group: Mapped[BloodGroup] = mapped_column(String(10))
     rh_negative: Mapped[bool] = mapped_column(Boolean, default=False)
     kell_negative: Mapped[bool] = mapped_column(Boolean, default=False)
     extended_phenotype: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)

@@ -38,7 +38,11 @@ class Donor(Base):
     age: Mapped[int] = mapped_column(Integer)
 
     # Clinical
-    blood_group: Mapped[BloodGroup] = mapped_column(String(3))
+    # String(10) — fits all ABO/Rh codes ('O+'..'AB-') AND the long enum
+    # values 'Bombay' (6 chars, hh phenotype) and 'unknown' (7 chars, from
+    # Blood Warriors "Do not Know" guest-pool rows). SQLite ignored the
+    # narrower String(3); Postgres rejected the seed with StringDataRightTruncation.
+    blood_group: Mapped[BloodGroup] = mapped_column(String(10))
     rh_negative: Mapped[bool] = mapped_column(Boolean, default=False)
     kell_negative: Mapped[bool] = mapped_column(Boolean, default=False)
     extended_phenotype: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
