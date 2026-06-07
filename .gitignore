@@ -21,10 +21,14 @@ ENV/
 htmlcov/
 .tox/
 
-# ML artifacts (we'll add data/models when they exist)
-backend/data/
+# ML artifacts (we'll add data/models when they exist).
+# Dataset.csv is needed by the prod container so it can seed RDS on first
+# boot — keep it tracked; everything else under data/ stays ignored.
+backend/data/*
+!backend/data/Dataset.csv
+!backend/data/README.md
+!backend/data/.gitignore
 backend/models/*.pkl
-backend/models/*.joblib
 backend/app/ml/**/checkpoints/
 
 # --- Node / Next.js ---

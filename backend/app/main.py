@@ -46,6 +46,7 @@ from app.api import (
 from app.api.dispatch_queue import router as dispatch_queue_router
 from app.api.emails import router as emails_router
 from app.api.admin_demo import router as admin_demo_router
+from app.api.admin_system import router as admin_system_router
 from app.api.admin_test import router as admin_test_router
 from app.api.auth import router as auth_router
 from app.api.donor_portal import router as donor_portal_router
@@ -153,6 +154,7 @@ def create_app() -> FastAPI:
     app.include_router(patient_portal_router)
     app.include_router(admin_test_router)
     app.include_router(admin_demo_router)
+    app.include_router(admin_system_router)
 
     return app
 

@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml ./
 COPY app ./app
+# scripts/ holds the ingest_real_dataset entry that /admin/system/seed-
+# from-dataset calls in prod. data/ has the Blood Warriors CSV used to
+# populate RDS on first boot. models/ has the pre-trained churn + survival
+# joblib artifacts that the lazy ML loaders read off disk.
+COPY scripts ./scripts
+COPY data ./data
+COPY models ./models
 
 RUN pip install --upgrade pip setuptools wheel \
     && pip install .
@@ -46,6 +53,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app/app ./app
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/models ./models
 COPY pyproject.toml ./
 
 # Drop privileges
