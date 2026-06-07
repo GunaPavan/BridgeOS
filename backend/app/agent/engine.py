@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Optional
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.agent.context import (
@@ -19,7 +20,95 @@ from app.agent.context import (
 from app.agent.language import detect_language
 from app.agent.llm_client import ChatMessage, LLMResponse, chat
 from app.agent.memory import RetrievedMemory, record_memory, retrieve_memories
+from app.models import Donor, Patient
 from app.models.cohort_memory import MemoryKind
+
+
+# Common English / Hindi stop words that look like proper nouns but aren't.
+# Used by _find_named_matches to avoid searching the donor table for "tell",
+# "about", "donor", etc.
+_NAME_STOPWORDS = {
+    "tell", "show", "give", "find", "list", "what", "where", "when", "who",
+    "why", "how", "the", "a", "an", "this", "that", "these", "those",
+    "is", "are", "was", "were", "and", "or", "but", "if", "of", "to", "for",
+    "with", "from", "by", "on", "in", "at", "as", "be", "do", "did", "has",
+    "have", "had", "me", "my", "you", "your", "yours", "i", "we", "us",
+    "our", "they", "them", "their", "it", "its", "he", "she", "his", "her",
+    "donor", "donors", "patient", "patients", "bridge", "bridges", "info",
+    "details", "about", "more", "any", "some", "all", "next", "previous",
+    "name", "names", "phone", "email", "address", "blood", "group",
+    "transfusion", "cohort", "wave", "ping", "status", "risk", "stable",
+    "active", "inactive", "available", "please", "can", "could", "should",
+}
+
+
+def _find_named_matches(
+    db: Session, query: str, *, exclude_donor_id: Optional[uuid.UUID] = None,
+    per_name_cap: int = 6,
+) -> str:
+    """Search the DB for donors / patients whose first name appears in the
+    user query. Returns a formatted block to feed the LLM, or "" if no
+    candidate names landed any hits.
+
+    The agent uses this so it can disambiguate ("there are 5 Aaradhyas —
+    which one?") instead of falsely claiming nobody matches the user's
+    question. Capped per_name_cap to keep the prompt small + protect
+    Bedrock token budget."""
+    if not query:
+        return ""
+    tokens = re.findall(r"[A-Za-zÀ-ÿऀ-ॿఀ-౿஀-௿]{3,}", query)
+    candidates = []
+    seen = set()
+    for t in tokens:
+        norm = t.strip().lower()
+        if not norm or norm in _NAME_STOPWORDS or norm in seen:
+            continue
+        seen.add(norm)
+        candidates.append(norm)
+    if not candidates:
+        return ""
+    blocks: list[str] = []
+    for name in candidates[:4]:  # at most 4 names per query
+        try:
+            donor_rows = db.execute(
+                select(Donor.id, Donor.name, Donor.blood_group, Donor.city, Donor.state)
+                .where(func.lower(Donor.name).like(f"{name}%"))
+                .limit(per_name_cap + 1)
+            ).all()
+        except Exception:
+            donor_rows = []
+        try:
+            patient_rows = db.execute(
+                select(Patient.id, Patient.name, Patient.blood_group, Patient.hospital)
+                .where(func.lower(Patient.name).like(f"{name}%"))
+                .limit(per_name_cap + 1)
+            ).all()
+        except Exception:
+            patient_rows = []
+        if exclude_donor_id is not None:
+            donor_rows = [r for r in donor_rows if r[0] != exclude_donor_id]
+        if not donor_rows and not patient_rows:
+            continue
+        section: list[str] = [f"Matches for name token \"{name.title()}\":"]
+        for row in donor_rows[:per_name_cap]:
+            did, dname, bg, city, state = row
+            bg_str = getattr(bg, "value", str(bg or "?"))
+            loc = ", ".join(p for p in (city, state) if p) or "?"
+            section.append(f"  donor  · {dname or '?'}  · {bg_str}  · {loc}  · id={str(did)[:8]}")
+        for row in patient_rows[:per_name_cap]:
+            pid, pname, bg, hospital = row
+            bg_str = getattr(bg, "value", str(bg or "?"))
+            section.append(f"  patient · {pname or '?'} · {bg_str} · {hospital or '?'} · id={str(pid)[:8]}")
+        more_donors = max(0, len(donor_rows) - per_name_cap)
+        more_patients = max(0, len(patient_rows) - per_name_cap)
+        if more_donors or more_patients:
+            section.append(
+                f"  ... (+{more_donors} more donors, +{more_patients} more patients — refine the name)"
+            )
+        blocks.append("\n".join(section))
+    if not blocks:
+        return ""
+    return "NAMED_MATCHES (donors / patients whose first name appears in the question):\n" + "\n\n".join(blocks)
 
 
 LANGUAGE_NAMES = {
@@ -135,24 +224,32 @@ def _build_system_prompt(language: str, has_context: bool) -> str:
         # ================================================================
         # DISAMBIGUATION — Indian first names overlap heavily.
         # ================================================================
-        "DISAMBIGUATION:",
-        "  - When the user mentions only a first name (\"tell me about Rakesh\"),",
-        "    check whether the CONTEXT block names exactly one person matching",
-        "    that first name. If yes, answer about THAT person and append a",
-        "    one-line note: \"Note: there are other donors named Rakesh in the",
-        "    system — open the donors list to pick a specific one.\"",
-        "  - If the CONTEXT lists multiple people whose first name matches",
-        "    (e.g. two Rakeshes in the same bridge), do NOT pick one — list",
-        "    each match with their last name + short id + blood group and ask",
-        "    which one the coordinator means.",
-        "  - When the user mentions a name that does NOT appear in the CONTEXT",
-        "    at all, do not guess. Reply: \"I don't see anyone named [X] in",
-        "    the current selection. Pick them from the donors / patients /",
-        "    bridges list above and ask again.\"",
-        "  - When the user asks a question that depends on data not in the",
-        "    CONTEXT (e.g. \"who else has B+?\"), say so plainly: \"I only see",
-        "    [current entity] right now. Open the donors page and filter by",
-        "    B+ to see the full list.\"",
+        "DISAMBIGUATION (this is critical — Indian first names overlap a lot):",
+        "  When the user mentions a name, you have TWO sources to check:",
+        "    a) the CONTEXT block (the currently-selected entity + neighbours)",
+        "    b) the NAMED_MATCHES block (everyone in the database whose first",
+        "       name appears in the question, with id, blood group, location)",
+        "",
+        "  Rules:",
+        "  - If NAMED_MATCHES lists EXACTLY ONE person for that name, answer",
+        "    about that person using their last name + id + blood group.",
+        "  - If NAMED_MATCHES lists MULTIPLE people, do NOT pick. Reply with:",
+        "    \"There are N donors/patients named [Name] in the system:\"",
+        "    then list each match on its own line with last name, blood",
+        "    group, city, and the 8-char id from NAMED_MATCHES, and END",
+        "    with \"Which one do you mean? Open the donors / patients list",
+        "    and select them above.\". Do NOT volunteer extra commentary.",
+        "  - If NAMED_MATCHES is absent or empty AND the name is in CONTEXT,",
+        "    answer about that one and append: \"Note: there may be other",
+        "    people with that first name — search the donors list to be",
+        "    sure.\"",
+        "  - If NAMED_MATCHES is absent or empty AND the name is NOT in",
+        "    CONTEXT, reply: \"I don't see anyone named [Name] in the system.",
+        "    Try a different spelling or open the donors / patients list.\"",
+        "  - When the user asks a question that depends on data not in",
+        "    CONTEXT or NAMED_MATCHES (e.g. \"who else has B+?\"), say so",
+        "    plainly: \"I only see [current entity] right now. Open the",
+        "    donors page and filter by B+ to see the full list.\"",
         "",
         # ================================================================
         # OUTPUT SHAPE
@@ -359,7 +456,7 @@ def answer_query(
             top_k=memory_top_k,
         )
 
-    # Build prompt: MEMORIES (if any) → CONTEXT → QUESTION
+    # Build prompt: MEMORIES (if any) → NAMED_MATCHES → CONTEXT → QUESTION
     parts: list[str] = []
     if retrieved:
         memory_block = "\n".join(
@@ -369,6 +466,12 @@ def answer_query(
             "MEMORIES (most relevant past notes — may include earlier Q&A, "
             f"recruit events, WhatsApp summaries):\n{memory_block}"
         )
+    # Disambiguation block — every donor/patient whose first name appears in
+    # the question, with id + last name + blood group + location. Lets the
+    # agent say "I see 5 Aaradhyas, which one?" instead of "I don't see her".
+    named_block = _find_named_matches(db, query, exclude_donor_id=donor_id)
+    if named_block:
+        parts.append(named_block)
     parts.append(f"CONTEXT:\n{ctx.summary}")
     parts.append(f"QUESTION: {query}")
     user_content = "\n\n".join(parts)
