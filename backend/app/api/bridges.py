@@ -30,16 +30,8 @@ from app.schemas import (
 router = APIRouter(prefix="/bridges", tags=["bridges"])
 
 
-def _bridge_to_list_item(
-    bridge: Bridge,
-    *,
-    ml_health_override: BridgeHealth | None = None,
-) -> BridgeListItem:
-    """Map a Bridge ORM row into the list-view DTO.
-
-    ``ml_health_override`` lets the caller swap in the analytics-style ML
-    cohort health so /bridges and /analytics agree. We keep the ``health``
-    field name on the wire so the frontend doesn't need a schema change."""
+def _bridge_to_list_item(bridge: Bridge) -> BridgeListItem:
+    """Map a Bridge ORM row into the list-view DTO."""
     patient = bridge.patient
     return BridgeListItem(
         id=bridge.id,
@@ -53,57 +45,12 @@ def _bridge_to_list_item(
         status=bridge.status,
         active_donor_count=bridge.active_donor_count,
         total_donor_count=bridge.total_donor_count,
-        health=ml_health_override if ml_health_override is not None else bridge.health,
+        health=bridge.health,
         last_transfusion_date=patient.last_transfusion_date,
         next_transfusion_date=patient.next_transfusion_date,
         days_until_transfusion=patient.days_until_transfusion,
         created_at=bridge.created_at,
     )
-
-
-def _compute_ml_health_for_bridges(
-    db, bridges: list[Bridge]
-) -> dict[uuid.UUID, BridgeHealth]:
-    """Same logic as the /analytics donut + /patients page — runs the
-    StabilityPredictor on each bridge's active membership set and returns
-    {bridge_id: ml_health}. Empty if the predictor can't be loaded."""
-    if not bridges:
-        return {}
-    try:
-        from app.api.stability import _combined_ml_health
-        from app.ml.stability import extract_features, get_predictor
-    except Exception:
-        return {}
-    try:
-        predictor = get_predictor()
-    except Exception:
-        return {}
-    if predictor is None:
-        return {}
-    from datetime import date as _date
-
-    from app.models import MembershipStatus
-
-    today = _date.today()
-    out: dict[uuid.UUID, BridgeHealth] = {}
-    for bridge in bridges:
-        active = [m for m in bridge.memberships if m.status == MembershipStatus.ACTIVE]
-        if not active:
-            out[bridge.id] = BridgeHealth.CRITICAL
-            continue
-        try:
-            feats = [extract_features(m.donor, bridge, today) for m in active]
-            preds = predictor.predict_batch(feats)
-            avg = sum(p.churn_90d for p in preds) / len(preds)
-            out[bridge.id] = _combined_ml_health(
-                avg,
-                len(active),
-                patient_cadence_days=bridge.patient_cadence_days,
-                db=db,
-            )
-        except Exception:
-            out[bridge.id] = bridge.health
-    return out
 
 
 def _bridge_to_detail(bridge: Bridge) -> BridgeDetail:
@@ -178,27 +125,13 @@ def list_bridges(
 
     bridges = db.execute(stmt).unique().scalars().all()
 
-    # Compute ml_health for every bridge that survived SQL filtering — same
-    # source of truth the /analytics donut uses. Falls back to bridge.health
-    # if the StabilityPredictor isn't loaded.
-    ml_health_map = _compute_ml_health_for_bridges(db, bridges)
-
-    # Post-filter by health (computed property, can't push down to SQL cheaply).
-    # Use the ML-derived health when available so /bridges and /analytics
-    # agree on which bridges are at_risk / critical.
+    # Post-filter by health (computed property, can't push down to SQL cheaply)
     if health is not None:
-        bridges = [
-            b
-            for b in bridges
-            if (ml_health_map.get(b.id) or b.health) == health
-        ]
+        bridges = [b for b in bridges if b.health == health]
 
     total = len(bridges)
     page = bridges[skip : skip + limit]
-    items = [
-        _bridge_to_list_item(b, ml_health_override=ml_health_map.get(b.id))
-        for b in page
-    ]
+    items = [_bridge_to_list_item(b) for b in page]
     return BridgesPage(items=items, total=total, skip=skip, limit=limit)
 
 
