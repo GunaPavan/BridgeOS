@@ -1683,6 +1683,23 @@ export const api = {
     return request<SchedulerHealth>(`/system/scheduler/health`);
   },
 
+  // ----- Admin demo: one-click multi-channel fan-out -----
+
+  async getDemoContacts(): Promise<DemoContacts> {
+    return request<DemoContacts>(`/admin/demo/contacts`);
+  },
+
+  async fireAllDemoChannels(): Promise<FireAllResponse> {
+    // Header-secret guard mirrors /admin/test/*. Lives in NEXT_PUBLIC so it
+    // ships in the bundle — same trust model as the demo itself (one-click,
+    // unauthenticated). Rotate the backend secret to disable instantly.
+    const secret = process.env.NEXT_PUBLIC_DEMO_SECRET ?? "";
+    return request<FireAllResponse>(`/admin/demo/fire-all`, {
+      method: "POST",
+      headers: { "X-Admin-Test-Secret": secret },
+    });
+  },
+
   // ----- Phase B: per-ping follow-ups -----
 
   async getPingFollowUps(pingId: string): Promise<PingFollowUps> {
@@ -2088,6 +2105,55 @@ export interface SchedulerHealth {
   issues: string[];
   last_tick_at: string | null;
   failure_streaks: Record<string, number>;
+}
+
+// ----- Admin demo (one-click multi-channel fan-out) -----------------------
+
+export type DemoChannelKey = "voice" | "whatsapp" | "sms" | "email";
+
+export interface ChannelResult {
+  channel: DemoChannelKey;
+  ok: boolean;
+  is_mock: boolean;
+  sid_or_message_id: string | null;
+  status: string | null;
+  error: string | null;
+  duration_ms: number;
+}
+
+export interface DemoContext {
+  phone: string;
+  email: string;
+  donor_id: string;
+  donor_name: string;
+  patient_id: string;
+  patient_name: string;
+  ping_id: string;
+}
+
+export interface OutreachCopy {
+  source: string; // "bedrock" | "anthropic" | "mock" | "template_fallback"
+  model: string;
+  voice_question: string;
+  whatsapp_body: string;
+  sms_body: string;
+  email_subject: string;
+  email_body: string;
+  tokens_in: number | null;
+  tokens_out: number | null;
+}
+
+export interface FireAllResponse {
+  fired_at: string;
+  total_duration_ms: number;
+  context: DemoContext;
+  copy: OutreachCopy;
+  channels: ChannelResult[];
+}
+
+export interface DemoContacts {
+  phone: string;
+  email: string;
 }
 
 export { ApiError };

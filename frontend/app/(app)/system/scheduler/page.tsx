@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Activity, AlertTriangle, RefreshCw, Sparkles } from "lucide-react";
 
+import { DemoFireAllCard } from "@/components/ui/demo-fire-all-card";
 import { DispatchQueueTile } from "@/components/ui/dispatch-queue-tile";
 import { EventsFeedPanel } from "@/components/ui/events-feed-panel";
 import { JobRunHistory } from "@/components/ui/job-run-history";
@@ -68,6 +69,9 @@ export default function SchedulerPage() {
           </button>
         </div>
       </header>
+
+      {/* One-click multi-channel demo (judge wow-factor) */}
+      <DemoFireAllCard />
 
       {/* Summary row */}
       {data && (

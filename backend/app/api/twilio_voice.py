@@ -46,15 +46,37 @@ def _twiml_response(body: str) -> PlainTextResponse:
     )
 
 
+def _public_base_url(request: Request) -> str:
+    """Origin used to build TwiML action / status / redirect URLs.
+
+    We prefer ``BRIDGE_OS_PUBLIC_URL`` because Starlette's ``request.base_url``
+    returns ``http://...`` when the app sits behind a TLS-terminating ALB
+    (the Fargate task receives plain HTTP). Twilio refuses to POST callbacks
+    to ``http://`` action URLs, so falling back to ``request.base_url`` here
+    causes a silent call drop right after the question plays.
+    """
+    import os
+    explicit = os.environ.get("BRIDGE_OS_PUBLIC_URL", "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    return str(request.base_url).rstrip("/")
+
+
 def _xml_escape(s: str) -> str:
     import html as _html
     return _html.escape(s)
 
 
 def _voice_attr() -> str:
-    """Polly Aditi-Neural is a good Indian English voice. Falls back to
-    AWS Polly's default English if unavailable."""
-    return 'voice="Polly.Aditi-Neural"'
+    """Indian-English Neural Polly voice. The Aditi voice has NO Neural
+    variant — asking Twilio for ``Polly.Aditi-Neural`` triggers error 13520
+    'Say: Invalid text' and the caller hears 'application error'. Kajal-Neural
+    is the Neural-grade en-IN voice that ships with the standard Twilio
+    catalog. Override per-deployment via TWILIO_VOICE_NAME (e.g.
+    ``Polly.Aditi`` for standard fallback)."""
+    import os
+    name = os.environ.get("TWILIO_VOICE_NAME", "Polly.Kajal-Neural").strip()
+    return f'voice="{name}"'
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +89,7 @@ def _voice_attr() -> str:
 async def voice_ask(request: Request, ping_id: Optional[str] = Query(None)):
     """First TwiML the call hits. Plays the question + opens a <Gather>
     so we can capture the donor's spoken response."""
-    base_url = str(request.base_url).rstrip("/")
+    base_url = _public_base_url(request)
     action_url = f"{base_url}/twilio/voice/twiml/answer?ping_id={ping_id or ''}"
     status_url = f"{base_url}/twilio/voice/status?ping_id={ping_id or ''}"
 
@@ -93,8 +115,22 @@ async def voice_ask(request: Request, ping_id: Optional[str] = Query(None)):
 def _build_question_from_ping(ping_id: Optional[str]) -> str:
     """Build a contextual question using the actual patient + slot data.
 
-    Falls back to a generic question if the ping can't be looked up.
+    If the one-click demo (/admin/demo/fire-all) just composed a Bedrock
+    voice question for this ping_id, return that — so the call hears the
+    same LLM-written sentence the WhatsApp / SMS / email all carry. Falls
+    back to a templated question if no cache hit, then to a generic one.
     """
+    # Look up the Bedrock-composed question if /admin/demo/fire-all set it.
+    if ping_id:
+        try:
+            from app.services.demo_outreach import get_cached_voice_question
+
+            cached = get_cached_voice_question(ping_id)
+            if cached:
+                return cached
+        except Exception:  # pragma: no cover — never let the cache break the call
+            logger.exception("voice-question cache lookup failed for ping %s", ping_id)
+
     if not ping_id:
         return (
             "Hello, this is Bridge O S calling on behalf of Blood Warriors. "
@@ -106,10 +142,16 @@ def _build_question_from_ping(ping_id: Optional[str]) -> str:
         from app.db import SessionLocal
 
         with SessionLocal() as db:
+            from app.models import Patient
+
             ping = db.get(OutreachPing, uuid.UUID(ping_id))
-            if ping is None or ping.wave is None or ping.wave.patient is None:
+            if ping is None or ping.wave is None or ping.wave.patient_id is None:
                 return _build_question_from_ping(None)
-            patient = ping.wave.patient
+            # OutreachWave has patient_id (FK) but no `patient` relationship —
+            # accessing ping.wave.patient raises AttributeError. Fetch directly.
+            patient = db.get(Patient, ping.wave.patient_id)
+            if patient is None:
+                return _build_question_from_ping(None)
             slot_str = ping.wave.slot_date.strftime("%a %d %B")
             hospital = patient.hospital
             blood = getattr(patient.blood_group, "value", str(patient.blood_group))
