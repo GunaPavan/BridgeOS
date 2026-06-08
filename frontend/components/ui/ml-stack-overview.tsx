@@ -45,7 +45,7 @@ export function MLStackOverview() {
           Production ML stack
         </h2>
         <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-emerald-300">
-          Real Blood Warriors data
+          Production donor dataset
         </span>
       </div>
 
@@ -95,7 +95,7 @@ export function MLStackOverview() {
 
       <p className="mt-3 flex items-center gap-1.5 text-[11px] text-white/40">
         <Database className="h-3 w-3" />
-        Trained on 6,949 real Blood Warriors donors (Mar 2020 – Aug 2025).
+        Trained on 6,949 donor records (Mar 2020 – Aug 2025).
         Winner selected via Borda multi-criteria ranking across CV, test, and
         latency metrics.
       </p>

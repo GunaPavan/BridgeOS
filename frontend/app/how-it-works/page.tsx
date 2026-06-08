@@ -215,7 +215,7 @@ export default function HowItWorksPage() {
               number="1"
               title="Multi-class Churn Classifier + Survival Model"
               body={[
-                "Two production models trained on real Blood Warriors donor data via a 6-algorithm bake-off each. The churn model (XGBoost — 0.979 macro AUC, 0.810 macro F1) predicts whether a donor is Active, Not-donated-1Y, or Limited-despite-calls — a 3-way intent signal, not a binary score.",
+                "Two production models trained on the donor dataset via a 6-algorithm bake-off each. The churn model (XGBoost — 0.979 macro AUC, 0.810 macro F1) predicts whether a donor is Active, Not-donated-1Y, or Limited-despite-calls — a 3-way intent signal, not a binary score.",
                 "The survival model (Gradient Boosting Survival — C-index 0.751, 0.3 ms inference) returns a continuous 30/90/180/365-day retention curve so the cohort can be triaged by who's about to drift, not just who already has.",
                 "Both models score the entire pool live on the analytics page — predicted engagement mix, intervention counts (needs-reminder / stop-calling), and 365-day survival quartiles — so coordinators see the network's risk shape, not just lagging indicators.",
               ]}

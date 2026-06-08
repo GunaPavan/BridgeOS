@@ -10,7 +10,7 @@ Built by **AlgoWarriors** — Gunaputra Nagendra Pavan Yedida and Aakash Jangeet
 
 ## 🧪 Running this yourself
 
-> **Heads up:** The live deployment (`bridge-os.click` + `api.bridge-os.click`) ran on AWS credits provided by Blend360 for the AI for Good 2.0 hackathon. Those credentials have been revoked now that judging is closed, so the public URLs are no longer reachable. The complete codebase, real Blood Warriors dataset, trained ML models, and infrastructure manifests are all in this repo — you can clone it and run the system locally without an AWS account, or drop in your own AWS account to redeploy.
+> **Heads up:** The live deployment (`bridge-os.click` + `api.bridge-os.click`) ran on AWS credits provided by Blend360 for the AI for Good 2.0 hackathon. Those credentials have been revoked now that judging is closed, so the public URLs are no longer reachable. The complete codebase, the donor dataset, trained ML models, and infrastructure manifests are all in this repo — you can clone it and run the system locally without an AWS account, or drop in your own AWS account to redeploy.
 
 **Local quick-start (no AWS, no Cognito, no Twilio account needed):**
 
@@ -52,7 +52,7 @@ Blood Warriors invented the operational solution — **Blood Bridge**: a fixed c
 
 | Surface | Detail |
 |---|---|
-| **84 patients** in RDS Postgres (real Blood Warriors data) |
+| **84 patients** in RDS Postgres (Blood Warriors-shaped donor dataset, extended) |
 | **6,862 donors** with response-rate, donation history, geography |
 | **79 active Blood Bridges** with ML-scored cohort health |
 | **625 bridge memberships** rotating across the cohort |

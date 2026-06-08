@@ -83,7 +83,7 @@ test.describe("Real-data ML surfaces (Module Integration live)", () => {
     // Both model cards must render with at least the title text
     await expect(page.getByTestId("ml-card-churn")).toBeVisible();
     await expect(page.getByTestId("ml-card-survival")).toBeVisible();
-    await expect(overview).toContainText(/real blood warriors data/i);
+    await expect(overview).toContainText(/production donor dataset/i);
   });
 
   test("Analytics page shows churn + survival bake-off tables with winner marked", async ({
