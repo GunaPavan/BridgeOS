@@ -8,7 +8,6 @@ import {
   Cloud,
   Droplet,
   Languages,
-  LogIn,
   MessageSquareText,
   Network,
   Play,
@@ -159,12 +158,11 @@ export default function HomePage() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/login?next=%2Fdashboard"
+              href="/dashboard"
               data-testid="hero-cta-primary"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-600"
             >
-              <LogIn className="h-4 w-4" />
-              Sign in to the dashboard
+              Open the dashboard
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
@@ -188,59 +186,39 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Judge / reviewer demo credentials — prominently surfaced so
-              hackathon reviewers can explore the full dashboard immediately
-              without going through the donor/patient signup flow. The
-              account is in the `admins` Cognito group so every page is
-              visible. */}
+          {/* Post-hackathon status — the live AWS deployment ran during the
+              AI for Good 2.0 judging window on Blend360-provided credits.
+              Those credits were revoked post-event, so this card explains
+              the situation and points reviewers at the source. */}
           <div
-            data-testid="judge-credentials-card"
+            data-testid="post-hackathon-card"
             className="mx-auto mt-10 max-w-2xl rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-orange-500/10 p-5 text-left"
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300/90">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Hackathon reviewer access
-                </div>
-                <p className="mt-1 text-sm text-white/80">
-                  The dashboard is auth-gated. Use the account below for full
-                  admin access to every page — donor list, ML cohort health,
-                  simulator, WhatsApp panel, automation engine and the live
-                  demo button.
-                </p>
-              </div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300/90">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Post-hackathon status
+            </div>
+            <p className="mt-3 text-sm text-white/80">
+              The live deployment showcased during AI for Good 2.0 ran on AWS
+              credits provided by Blend360; those credentials have been
+              revoked now that judging is closed. The complete codebase,
+              dataset, ML models, and AWS manifests remain in this repo —
+              clone it and run the stack locally to explore every page, or
+              drop in your own AWS account to redeploy.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
-                href="/login?next=%2Fdashboard"
-                className="hidden shrink-0 items-center gap-2 rounded-full bg-amber-400/90 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300 sm:inline-flex"
+                href="https://github.com/GunaPavan/BridgeOS"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-amber-400/90 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300"
               >
-                Sign in
+                View on GitHub
                 <ArrowRight className="h-4 w-4" />
               </Link>
-            </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-white/5 bg-black/30 p-3 font-mono text-xs">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">
-                  email
-                </p>
-                <p
-                  data-testid="judge-credentials-email"
-                  className="mt-1 text-white"
-                >
-                  gunapavan4321@gmail.com
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/5 bg-black/30 p-3 font-mono text-xs">
-                <p className="text-[10px] uppercase tracking-wider text-white/40">
-                  password
-                </p>
-                <p
-                  data-testid="judge-credentials-password"
-                  className="mt-1 text-white"
-                >
-                  Admin@123#
-                </p>
-              </div>
+              <span className="text-xs text-white/55">
+                Local quick-start in <code className="rounded bg-black/30 px-1.5 py-0.5">README.md</code>
+              </span>
             </div>
           </div>
 

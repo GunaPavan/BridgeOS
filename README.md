@@ -8,20 +8,33 @@ Built by **AlgoWarriors** — Gunaputra Nagendra Pavan Yedida and Aakash Jangeet
 
 ---
 
-## 🔑 Reviewer access
+## 🧪 Running this yourself
 
-The dashboard is auth-gated. To explore the full suite of features, sign in with the admin account below:
+> **Heads up:** The live deployment (`bridge-os.click` + `api.bridge-os.click`) ran on AWS credits provided by Blend360 for the AI for Good 2.0 hackathon. Those credentials have been revoked now that judging is closed, so the public URLs are no longer reachable. The complete codebase, real Blood Warriors dataset, trained ML models, and infrastructure manifests are all in this repo — you can clone it and run the system locally without an AWS account, or drop in your own AWS account to redeploy.
 
-| Field | Value |
-|---|---|
-| Live frontend | **https://main.d3fwu2lhbcn0pw.amplifyapp.com** |
-| Live backend | **https://api.bridge-os.click** |
-| Swagger / OpenAPI | **https://api.bridge-os.click/docs** |
-| Sign-in URL | **https://main.d3fwu2lhbcn0pw.amplifyapp.com/login** |
-| Demo email | `gunapavan4321@gmail.com` |
-| Demo password | `Admin@123#` |
+**Local quick-start (no AWS, no Cognito, no Twilio account needed):**
 
-That account is in the `admins` Cognito group so every page is accessible (donor list, patient list, bridges, ML cohort health, simulator, WhatsApp panel, automation engine, and the one-click multi-channel demo button on `/system/scheduler`).
+```bash
+git clone https://github.com/GunaPavan/BridgeOS.git
+cd BridgeOS
+
+# --- Backend (FastAPI + SQLite, ML models load from backend/models/) ---
+cd backend
+python -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -e .
+python -m scripts.seed               # ingests Dataset.csv into local SQLite
+python -m uvicorn app.main:app --port 8000
+
+# --- Frontend (Next.js) — in a second terminal ---
+cd frontend
+npm install
+npm run dev                          # http://localhost:3000
+```
+
+Visit `http://localhost:3000/dashboard` — the local shell opens directly with no sign-in (production used Cognito; self-host skips that for easy browsing). Every page works against the seeded SQLite DB; Bedrock LLM calls cleanly fall back to a keyword classifier when AWS credentials aren't configured, so the Care Agent + outreach engine still demo end-to-end.
+
+**Want the full deployed experience?** Drop your own AWS account ID into `infra/task-definition.json` (it's parameterised with `${AWS_ACCOUNT_ID}`), populate the Secrets Manager entries referenced by `valueFrom`, and the GitHub Actions OIDC pipeline (`.github/workflows/deploy-backend.yml`) will build the Docker image and roll the ECS service on every push to `main`. The CloudWatch dashboard JSON and 2 Lambda subscribers under `infra/lambda/` import cleanly into any account.
 
 ---
 
